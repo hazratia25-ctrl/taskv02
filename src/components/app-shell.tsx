@@ -1,0 +1,147 @@
+import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  LayoutDashboard,
+  ListChecks,
+  KanbanSquare,
+  CalendarDays,
+  BarChart3,
+  Bell,
+  Settings,
+  User,
+} from "lucide-react";
+import { useStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
+import { fa } from "@/lib/jalali";
+import { ProfileGate } from "./profile-gate";
+
+const NAV = [
+  { to: "/", label: "داشبورد", icon: LayoutDashboard },
+  { to: "/tasks", label: "وظایف", icon: ListChecks },
+  { to: "/kanban", label: "کانبان", icon: KanbanSquare },
+  { to: "/calendar", label: "تقویم", icon: CalendarDays },
+  { to: "/analytics", label: "آمار", icon: BarChart3 },
+  { to: "/notifications", label: "اعلان‌ها", icon: Bell },
+  { to: "/profile", label: "پروفایل", icon: User },
+  { to: "/settings", label: "تنظیمات", icon: Settings },
+] as const;
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const { notifications, profile, ready } = useStore();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const unread = notifications.filter((n) => !n.isRead).length;
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        در حال بارگذاری…
+      </div>
+    );
+  }
+
+  if (!profile) return <ProfileGate />;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto flex w-full max-w-7xl gap-6 px-3 pb-24 pt-4 md:px-6 lg:pb-8">
+        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
+          <div className="mb-4 px-2 pt-2">
+            <p className="text-lg font-bold">مدیریت وظایف</p>
+            <p className="text-xs text-muted-foreground">کاملاً آفلاین</p>
+          </div>
+          <nav className="flex flex-col gap-1">
+            {NAV.map((item) => {
+              const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent",
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.to === "/notifications" && unread > 0 && (
+                    <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] text-destructive-foreground">
+                      {fa(unread)}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-auto rounded-xl bg-sidebar-accent p-3 text-xs text-sidebar-accent-foreground">
+            داده‌ها فقط روی همین دستگاه ذخیره می‌شوند.
+          </div>
+        </aside>
+
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-3xl items-stretch justify-between px-1">
+          {NAV.slice(0, 6).map((item) => {
+            const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <item.icon className="size-5" />
+                {item.label}
+                {item.to === "/notifications" && unread > 0 && (
+                  <span className="absolute end-3 top-1 size-2 rounded-full bg-destructive" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+export function PageHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{title}</h1>
+        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+      </div>
+      {action}
+    </header>
+  );
+}
+
+export function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="surface flex flex-col items-center justify-center gap-2 p-10 text-center">
+      <p className="text-base font-semibold">{title}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
+}
