@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -19,6 +20,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/tasks': typeof TasksRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/tasks': typeof TasksRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/tasks': typeof TasksRoute
 }
 export interface FileRouteTypes {
@@ -80,9 +89,17 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/kanban'
     | '/notifications'
+    | '/profile'
     | '/tasks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analytics' | '/calendar' | '/kanban' | '/notifications' | '/tasks'
+  to:
+    | '/'
+    | '/analytics'
+    | '/calendar'
+    | '/kanban'
+    | '/notifications'
+    | '/profile'
+    | '/tasks'
   id:
     | '__root__'
     | '/'
@@ -90,6 +107,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/kanban'
     | '/notifications'
+    | '/profile'
     | '/tasks'
   fileRoutesById: FileRoutesById
 }
@@ -99,6 +117,7 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   KanbanRoute: typeof KanbanRoute
   NotificationsRoute: typeof NotificationsRoute
+  ProfileRoute: typeof ProfileRoute
   TasksRoute: typeof TasksRoute
 }
 
@@ -109,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -155,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   KanbanRoute: KanbanRoute,
   NotificationsRoute: NotificationsRoute,
+  ProfileRoute: ProfileRoute,
   TasksRoute: TasksRoute,
 }
 export const routeTree = rootRouteImport
