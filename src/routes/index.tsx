@@ -13,9 +13,9 @@ import { Plus, ListTodo, CheckCircle2, Loader2, AlertTriangle, Flame } from "luc
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "داشبورد | مدیریت وظایف آفلاین" },
+      { title: "مدیریت‌وظایف" },
       { name: "description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
-      { property: "og:title", content: "داشبورد | مدیریت وظایف آفلاین" },
+      { property: "og:title", content: "مدیریت‌وظایف" },
       { property: "og:description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
     ],
   }),
