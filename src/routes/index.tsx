@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
       { title: "داشبورد | مدیریت وظایف آفلاین" },
       { name: "description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
       { property: "og:title", content: "داشبورد | مدیریت وظایف آفلاین" },
-      { property: "og:description", content: "نمای کلی وظایف، پیشرفت و مهلت‌های نزدیک شما." },
+      { property: "og:description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
     ],
   }),
   component: Dashboard,
