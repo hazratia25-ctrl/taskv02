@@ -122,7 +122,9 @@ function renderChart(type: ChartType, rows: Datum[], colors: string[]) {
   );
 }
 
-function renderTrend(type: ChartType, rows: { name: string }[]) {
+type TrendRow = { name: string; ایجادشده: number; تکمیل‌شده: number };
+
+function renderTrend(type: ChartType, rows: TrendRow[]) {
   const common = (
     <>
       <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
@@ -143,8 +145,8 @@ function renderTrend(type: ChartType, rows: { name: string }[]) {
   }
   if (type === "pie") {
     const totals = [
-      { name: "ایجادشده", value: rows.reduce((a, r) => a + (r as any)["ایجادشده"], 0) },
-      { name: "تکمیل‌شده", value: rows.reduce((a, r) => a + (r as any)["تکمیل‌شده"], 0) },
+      { name: "ایجادشده", value: rows.reduce((a, r) => a + r["ایجادشده"], 0) },
+      { name: "تکمیل‌شده", value: rows.reduce((a, r) => a + r["تکمیل‌شده"], 0) },
     ];
     return (
       <PieChart>
