@@ -292,9 +292,23 @@ export function TaskDialog({
 
           <DialogFooter className="gap-2 sm:justify-start">
             <Button type="submit">{task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              انصراف
-            </Button>
+            <div className="flex flex-1 gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-1/2"
+                onClick={() => onOpenChange(false)}
+              >
+                انصراف
+              </Button>
+              <Button
+                type="button"
+                className="w-1/2 bg-orange-500 text-white hover:bg-orange-600"
+                onClick={resetForm}
+              >
+                پاک کردن فرم
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
