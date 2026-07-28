@@ -14,7 +14,10 @@ export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
       { title: "پروفایل | مدیریت وظایف آفلاین" },
-      { name: "description", content: "پروفایل محلی کاربر؛ بدون ورود آنلاین و بدون ارسال داده به سرور." },
+      {
+        name: "description",
+        content: "پروفایل محلی کاربر؛ بدون ورود آنلاین و بدون ارسال داده به سرور.",
+      },
       { property: "og:title", content: "پروفایل | مدیریت وظایف آفلاین" },
       { property: "og:description", content: "پروفایل محلی کاربر بدون ورود آنلاین." },
     ],
@@ -55,8 +58,8 @@ function ProfilePage() {
           <p className="text-lg font-bold">{profile?.name}</p>
           <p className="text-sm text-muted-foreground">{profile?.email || "بدون ایمیل"}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            عضو از {formatJalali(profile?.createdAt ?? null)} — {fa(tasks.length)} وظیفه، {fa(completed)}{" "}
-            تکمیل‌شده، {fa(tasks.filter(isOverdue).length)} عقب‌افتاده
+            عضو از {formatJalali(profile?.createdAt ?? null)} — {fa(tasks.length)} وظیفه،{" "}
+            {fa(completed)} تکمیل‌شده، {fa(tasks.filter(isOverdue).length)} عقب‌افتاده
           </p>
         </div>
       </div>
@@ -72,7 +75,12 @@ function ProfilePage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="p-avatar">نشانی تصویر</Label>
-          <Input id="p-avatar" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://…" />
+          <Input
+            id="p-avatar"
+            value={avatar}
+            onChange={(e) => setAvatar(e.target.value)}
+            placeholder="https://…"
+          />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit">ذخیره</Button>

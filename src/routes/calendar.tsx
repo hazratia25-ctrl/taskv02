@@ -14,7 +14,10 @@ export const Route = createFileRoute("/calendar")({
   head: () => ({
     meta: [
       { title: "تقویم شمسی | مدیریت وظایف آفلاین" },
-      { name: "description", content: "تقویم شمسی وظایف با نمایش مهلت‌ها و ایجاد وظیفه در تاریخ دلخواه." },
+      {
+        name: "description",
+        content: "تقویم شمسی وظایف با نمایش مهلت‌ها و ایجاد وظیفه در تاریخ دلخواه.",
+      },
       { property: "og:title", content: "تقویم شمسی | مدیریت وظایف آفلاین" },
       { property: "og:description", content: "تقویم شمسی وظایف و مدیریت مهلت‌ها." },
     ],
@@ -47,7 +50,8 @@ function CalendarPage() {
     setJy(y);
   };
 
-  const tasksForDay = (d: Date) => tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), d));
+  const tasksForDay = (d: Date) =>
+    tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), d));
   const dayTasks = useMemo(() => tasksForDay(selected), [tasks, selected]);
 
   return (

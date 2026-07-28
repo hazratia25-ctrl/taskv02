@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   emptyData,
   defaultSettings,
@@ -16,8 +24,7 @@ import { daysBetween, formatJalali } from "./jalali";
 
 const STORAGE_KEY = "task-manager-offline-v1";
 
-export const uid = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+export const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 function load(): AppData {
   if (typeof window === "undefined") return emptyData;
@@ -108,7 +115,11 @@ function buildNotifications(tasks: Task[], existing: AppNotification[], reminder
       taskId: task.id,
       type,
       title:
-        type === "OVERDUE" ? "وظیفه عقب‌افتاده" : type === "DUE_TODAY" ? "مهلت امروز" : "یادآوری مهلت",
+        type === "OVERDUE"
+          ? "وظیفه عقب‌افتاده"
+          : type === "DUE_TODAY"
+            ? "مهلت امروز"
+            : "یادآوری مهلت",
       message,
       isRead: false,
       createdAt: new Date().toISOString(),
@@ -145,8 +156,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const mode = data.settings.theme;
       const dark =
         mode === "dark" ||
-        (mode === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches);
+        (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
       document.documentElement.classList.toggle("dark", dark);
     };
     apply();
@@ -335,6 +345,8 @@ export function useStore() {
 
 export function isOverdue(task: Task) {
   return (
-    !!task.dueDate && task.status !== "COMPLETED" && daysBetween(new Date(), new Date(task.dueDate)) < 0
+    !!task.dueDate &&
+    task.status !== "COMPLETED" &&
+    daysBetween(new Date(), new Date(task.dueDate)) < 0
   );
 }

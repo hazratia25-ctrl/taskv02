@@ -20,7 +20,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useStore, type TaskInput } from "@/lib/store";
-import { PRIORITY_LABELS, STATUS_LABELS, type Task, type TaskPriority, type TaskStatus } from "@/lib/types";
+import {
+  PRIORITY_LABELS,
+  STATUS_LABELS,
+  type Task,
+  type TaskPriority,
+  type TaskStatus,
+} from "@/lib/types";
 import { JalaliDatePicker } from "./jalali-date-picker";
 import { toast } from "sonner";
 
@@ -140,7 +146,13 @@ export function TaskDialog({
   useEffect(() => {
     if (!open) return;
     const last = tags[tags.length - 1];
-    if (last && newTag === "" && !form.tagIds.includes(last.id) && last.name && wasJustCreated(last.createdAt)) {
+    if (
+      last &&
+      newTag === "" &&
+      !form.tagIds.includes(last.id) &&
+      last.name &&
+      wasJustCreated(last.createdAt)
+    ) {
       setForm((f) => ({ ...f, tagIds: [...f.tagIds, last.id] }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,7 +163,9 @@ export function TaskDialog({
       <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader className="text-start">
           <DialogTitle>{task ? "ویرایش وظیفه" : "وظیفه جدید"}</DialogTitle>
-          <DialogDescription>اطلاعات وظیفه را کامل کنید. همه‌چیز محلی ذخیره می‌شود.</DialogDescription>
+          <DialogDescription>
+            اطلاعات وظیفه را کامل کنید. همه‌چیز محلی ذخیره می‌شود.
+          </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={submit}>
@@ -263,7 +277,9 @@ export function TaskDialog({
                   </button>
                 );
               })}
-              {tags.length === 0 && <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>}
+              {tags.length === 0 && (
+                <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>
+              )}
             </div>
             <div className="flex gap-2">
               <Input
@@ -283,7 +299,11 @@ export function TaskDialog({
             </div>
             {form.tagIds.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                انتخاب‌شده: {form.tagIds.map((id) => tagMap.get(id)?.name).filter(Boolean).join("، ")}
+                انتخاب‌شده:{" "}
+                {form.tagIds
+                  .map((id) => tagMap.get(id)?.name)
+                  .filter(Boolean)
+                  .join("، ")}
               </p>
             )}
           </div>

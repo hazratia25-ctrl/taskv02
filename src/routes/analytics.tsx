@@ -28,7 +28,10 @@ export const Route = createFileRoute("/analytics")({
   head: () => ({
     meta: [
       { title: "آمار و تحلیل | مدیریت وظایف آفلاین" },
-      { name: "description", content: "نمودارهای وضعیت، اولویت و روند تکمیل وظایف از داده‌های محلی." },
+      {
+        name: "description",
+        content: "نمودارهای وضعیت، اولویت و روند تکمیل وظایف از داده‌های محلی.",
+      },
       { property: "og:title", content: "آمار و تحلیل | مدیریت وظایف آفلاین" },
       { property: "og:description", content: "نمودار وضعیت، اولویت و روند تکمیل وظایف." },
     ],
@@ -94,7 +97,13 @@ function renderChart(type: ChartType, rows: Datum[], colors: string[]) {
         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
         <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
         <Tooltip />
-        <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.2} />
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke={colors[0]}
+          fill={colors[0]}
+          fillOpacity={0.2}
+        />
       </AreaChart>
     );
   }
@@ -187,7 +196,7 @@ function AnalyticsPage() {
       months.push({
         name: JALALI_MONTHS[j.jm - 1],
         ایجادشده: tasks.filter((t) => inMonth(t.createdAt)).length,
-        "تکمیل‌شده": tasks.filter((t) => inMonth(t.completedAt)).length,
+        تکمیل‌شده: tasks.filter((t) => inMonth(t.completedAt)).length,
       });
     }
 

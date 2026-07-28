@@ -14,9 +14,15 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "مدیریت‌وظایف" },
-      { name: "description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
+      {
+        name: "description",
+        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+      },
       { property: "og:title", content: "مدیریت‌وظایف" },
-      { property: "og:description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
+      {
+        property: "og:description",
+        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+      },
     ],
   }),
   component: Dashboard,
@@ -53,7 +59,15 @@ function StatCard({
   );
 }
 
-function Section({ title, tasks, onEdit }: { title: string; tasks: Task[]; onEdit: (t: Task) => void }) {
+function Section({
+  title,
+  tasks,
+  onEdit,
+}: {
+  title: string;
+  tasks: Task[];
+  onEdit: (t: Task) => void;
+}) {
   if (tasks.length === 0) return null;
   return (
     <section className="space-y-3">

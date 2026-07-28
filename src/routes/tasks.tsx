@@ -127,7 +127,8 @@ function TasksPage() {
     if (debounced) {
       list = list.filter(
         (t) =>
-          t.title.toLowerCase().includes(debounced) || t.description.toLowerCase().includes(debounced),
+          t.title.toLowerCase().includes(debounced) ||
+          t.description.toLowerCase().includes(debounced),
       );
     }
     if (categoryId !== "ALL") list = list.filter((t) => t.categoryId === categoryId);
