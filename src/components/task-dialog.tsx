@@ -20,7 +20,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useStore, type TaskInput } from "@/lib/store";
-import { PRIORITY_LABELS, STATUS_LABELS, type Task, type TaskPriority, type TaskStatus } from "@/lib/types";
+import {
+  PRIORITY_LABELS,
+  STATUS_LABELS,
+  type Task,
+  type TaskPriority,
+  type TaskStatus,
+} from "@/lib/types";
 import { JalaliDatePicker } from "./jalali-date-picker";
 import { toast } from "sonner";
 
@@ -79,6 +85,31 @@ export function TaskDialog({
 
   const tagMap = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
 
+  const resetForm = () => {
+    setForm(
+      task
+        ? {
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            categoryId: task.categoryId,
+            tagIds: task.tagIds,
+            dueDate: task.dueDate,
+          }
+        : {
+            title: "",
+            description: "",
+            status: "TODO",
+            priority: "MEDIUM",
+            categoryId: null,
+            tagIds: [],
+            dueDate: defaultDueDate ?? null,
+          },
+    );
+    setError("");
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (form.title.trim().length < 2) {
@@ -115,7 +146,13 @@ export function TaskDialog({
   useEffect(() => {
     if (!open) return;
     const last = tags[tags.length - 1];
-    if (last && newTag === "" && !form.tagIds.includes(last.id) && last.name && wasJustCreated(last.createdAt)) {
+    if (
+      last &&
+      newTag === "" &&
+      !form.tagIds.includes(last.id) &&
+      last.name &&
+      wasJustCreated(last.createdAt)
+    ) {
       setForm((f) => ({ ...f, tagIds: [...f.tagIds, last.id] }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +163,9 @@ export function TaskDialog({
       <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader className="text-start">
           <DialogTitle>{task ? "ویرایش وظیفه" : "وظیفه جدید"}</DialogTitle>
-          <DialogDescription>اطلاعات وظیفه را کامل کنید. همه‌چیز محلی ذخیره می‌شود.</DialogDescription>
+          <DialogDescription>
+            اطلاعات وظیفه را کامل کنید. همه‌چیز محلی ذخیره می‌شود.
+          </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={submit}>
@@ -238,7 +277,9 @@ export function TaskDialog({
                   </button>
                 );
               })}
-              {tags.length === 0 && <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>}
+              {tags.length === 0 && (
+                <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>
+              )}
             </div>
             <div className="flex gap-2">
               <Input
@@ -258,7 +299,11 @@ export function TaskDialog({
             </div>
             {form.tagIds.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                انتخاب‌شده: {form.tagIds.map((id) => tagMap.get(id)?.name).filter(Boolean).join("، ")}
+                انتخاب‌شده:{" "}
+                {form.tagIds
+                  .map((id) => tagMap.get(id)?.name)
+                  .filter(Boolean)
+                  .join("، ")}
               </p>
             )}
           </div>
@@ -267,9 +312,23 @@ export function TaskDialog({
 
           <DialogFooter className="gap-2 sm:justify-start">
             <Button type="submit">{task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              انصراف
-            </Button>
+            <div className="flex flex-1 gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-1/2"
+                onClick={() => onOpenChange(false)}
+              >
+                انصراف
+              </Button>
+              <Button
+                type="button"
+                className="w-1/2 bg-orange-500 text-white hover:bg-orange-600"
+                onClick={resetForm}
+              >
+                پاک کردن فرم
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

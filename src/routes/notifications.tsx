@@ -11,7 +11,10 @@ export const Route = createFileRoute("/notifications")({
   head: () => ({
     meta: [
       { title: "اعلان‌ها | مدیریت وظایف آفلاین" },
-      { name: "description", content: "اعلان‌های محلی مهلت‌ها و وظایف عقب‌افتاده، بدون نیاز به اینترنت." },
+      {
+        name: "description",
+        content: "اعلان‌های محلی مهلت‌ها و وظایف عقب‌افتاده، بدون نیاز به اینترنت.",
+      },
       { property: "og:title", content: "اعلان‌ها | مدیریت وظایف آفلاین" },
       { property: "og:description", content: "اعلان‌های محلی مهلت‌ها و وظایف عقب‌افتاده." },
     ],
@@ -58,7 +61,10 @@ function NotificationsPage() {
           {notifications.map((n) => (
             <article
               key={n.id}
-              className={cn("surface flex items-start gap-3 p-4", !n.isRead && "border-primary/40 bg-primary/5")}
+              className={cn(
+                "surface flex items-start gap-3 p-4",
+                !n.isRead && "border-primary/40 bg-primary/5",
+              )}
             >
               <div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                 <Bell className="size-4" />
@@ -69,15 +75,27 @@ function NotificationsPage() {
                   {!n.isRead && <Badge>جدید</Badge>}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{n.message}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{formatJalali(n.createdAt, true)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatJalali(n.createdAt, true)}
+                </p>
               </div>
               <div className="flex shrink-0 gap-1">
                 {!n.isRead && (
-                  <Button size="icon" variant="ghost" onClick={() => markNotificationRead(n.id)} aria-label="خوانده شد">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => markNotificationRead(n.id)}
+                    aria-label="خوانده شد"
+                  >
                     <CheckCheck className="size-4" />
                   </Button>
                 )}
-                <Button size="icon" variant="ghost" onClick={() => deleteNotification(n.id)} aria-label="حذف">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => deleteNotification(n.id)}
+                  aria-label="حذف"
+                >
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
               </div>

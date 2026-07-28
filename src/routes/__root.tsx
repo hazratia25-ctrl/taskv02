@@ -47,7 +47,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">این صفحه بارگذاری نشد</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          این صفحه بارگذاری نشد
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           خطایی رخ داد. می‌توانید دوباره تلاش کنید یا به داشبورد برگردید.
         </p>
@@ -79,16 +81,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "مدیریت‌وظایف" },
-      { name: "description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
+      {
+        name: "description",
+        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+      },
       { name: "theme-color", content: "#0f766e" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:title", content: "مدیریت‌وظایف" },
       { name: "twitter:title", content: "مدیریت‌وظایف" },
-      { property: "og:description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
-      { name: "twitter:description", content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4beffa9c-c576-4318-94c3-aa25c19faff8/id-preview-60c3b14e--63802fdd-ee89-4bfb-9abe-2518d36b3904.lovable.app-1785092512148.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4beffa9c-c576-4318-94c3-aa25c19faff8/id-preview-60c3b14e--63802fdd-ee89-4bfb-9abe-2518d36b3904.lovable.app-1785092512148.png" },
+      {
+        property: "og:description",
+        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+      },
+      {
+        name: "twitter:description",
+        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4beffa9c-c576-4318-94c3-aa25c19faff8/id-preview-60c3b14e--63802fdd-ee89-4bfb-9abe-2518d36b3904.lovable.app-1785092512148.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4beffa9c-c576-4318-94c3-aa25c19faff8/id-preview-60c3b14e--63802fdd-ee89-4bfb-9abe-2518d36b3904.lovable.app-1785092512148.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

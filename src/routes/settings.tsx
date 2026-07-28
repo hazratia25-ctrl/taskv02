@@ -109,7 +109,10 @@ function SettingsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>پوسته</Label>
-            <Select value={settings.theme} onValueChange={(v) => updateSettings({ theme: v as ThemeMode })}>
+            <Select
+              value={settings.theme}
+              onValueChange={(v) => updateSettings({ theme: v as ThemeMode })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -127,7 +130,9 @@ function SettingsPage() {
               min={0}
               max={30}
               value={settings.reminderDays}
-              onChange={(e) => updateSettings({ reminderDays: Math.max(0, Number(e.target.value) || 0) })}
+              onChange={(e) =>
+                updateSettings({ reminderDays: Math.max(0, Number(e.target.value) || 0) })
+              }
             />
           </div>
         </div>
@@ -148,7 +153,12 @@ function SettingsPage() {
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-40 flex-1 space-y-2">
             <Label htmlFor="cat">نام دسته</Label>
-            <Input id="cat" value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="مثلاً کار" />
+            <Input
+              id="cat"
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              placeholder="مثلاً کار"
+            />
           </div>
           <div className="flex gap-1.5 pb-2">
             {PALETTE.map((c) => (
@@ -210,7 +220,11 @@ function SettingsPage() {
       <section className="surface space-y-4 p-5">
         <h2 className="font-semibold">برچسب‌ها</h2>
         <div className="flex gap-2">
-          <Input value={tagName} onChange={(e) => setTagName(e.target.value)} placeholder="برچسب جدید" />
+          <Input
+            value={tagName}
+            onChange={(e) => setTagName(e.target.value)}
+            placeholder="برچسب جدید"
+          />
           <Button
             variant="secondary"
             onClick={() => {
@@ -224,7 +238,9 @@ function SettingsPage() {
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {tags.length === 0 && <p className="text-sm text-muted-foreground">هنوز برچسبی ندارید.</p>}
+          {tags.length === 0 && (
+            <p className="text-sm text-muted-foreground">هنوز برچسبی ندارید.</p>
+          )}
           {tags.map((t) => (
             <Badge key={t.id} variant="secondary" className="gap-1.5">
               #{t.name}
@@ -269,7 +285,8 @@ function SettingsPage() {
               <AlertDialogHeader className="text-start">
                 <AlertDialogTitle>همه داده‌ها حذف شوند؟</AlertDialogTitle>
                 <AlertDialogDescription>
-                  وظایف، دسته‌بندی‌ها، برچسب‌ها و پروفایل شما پاک می‌شود. پیش از این کار خروجی بگیرید.
+                  وظایف، دسته‌بندی‌ها، برچسب‌ها و پروفایل شما پاک می‌شود. پیش از این کار خروجی
+                  بگیرید.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="gap-2 sm:justify-start">

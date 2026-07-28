@@ -36,15 +36,30 @@ export function ProfileGate() {
         <form className="space-y-4" onSubmit={submit}>
           <div className="space-y-2">
             <Label htmlFor="name">نام</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثلاً زهرا" />
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="مثلاً زهرا"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">ایمیل (اختیاری)</Label>
-            <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+            <Input
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="avatar">نشانی تصویر پروفایل (اختیاری)</Label>
-            <Input id="avatar" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://…" />
+            <Input
+              id="avatar"
+              value={avatar}
+              onChange={(e) => setAvatar(e.target.value)}
+              placeholder="https://…"
+            />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full">

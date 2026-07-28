@@ -114,7 +114,11 @@ export function JalaliDatePicker({
     <div className="flex items-center gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" className="flex-1 justify-start gap-2 font-normal">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 justify-start gap-2 font-normal"
+          >
             <CalendarDays className="size-4" />
             {value ? formatJalali(value) : "انتخاب مهلت"}
           </Button>
@@ -143,7 +147,13 @@ export function JalaliDatePicker({
         </PopoverContent>
       </Popover>
       {value && (
-        <Button type="button" variant="ghost" size="icon" onClick={() => onChange(null)} aria-label="حذف مهلت">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => onChange(null)}
+          aria-label="حذف مهلت"
+        >
           <X className="size-4" />
         </Button>
       )}
