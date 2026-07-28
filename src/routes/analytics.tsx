@@ -133,12 +133,19 @@ function renderTrend(type: ChartType, rows: { name: string }[]) {
     );
   }
   if (type === "pie") {
+    const totals = [
+      { name: "ایجادشده", value: rows.reduce((a, r) => a + (r as any)["ایجادشده"], 0) },
+      { name: "تکمیل‌شده", value: rows.reduce((a, r) => a + (r as any)["تکمیل‌شده"], 0) },
+    ];
     return (
-      <AreaChart data={rows}>
-        {common}
-        <Area type="monotone" dataKey="ایجادشده" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.25} />
-        <Area type="monotone" dataKey="تکمیل‌شده" stroke="var(--chart-3)" fill="var(--chart-3)" fillOpacity={0.25} />
-      </AreaChart>
+      <PieChart>
+        <Pie data={totals} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
+          <Cell fill="var(--chart-1)" />
+          <Cell fill="var(--chart-3)" />
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
     );
   }
   return (
