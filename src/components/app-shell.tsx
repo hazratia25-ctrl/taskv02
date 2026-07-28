@@ -13,6 +13,15 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { fa } from "@/lib/jalali";
 import { ProfileGate } from "./profile-gate";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NAV = [
   { to: "/", label: "داشبورد", icon: LayoutDashboard },
@@ -24,6 +33,9 @@ const NAV = [
   { to: "/profile", label: "پروفایل", icon: User },
   { to: "/settings", label: "تنظیمات", icon: Settings },
 ] as const;
+
+const MOBILE_NAV = NAV.slice(0, 5);
+const MENU_NAV = NAV.slice(5);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { notifications, profile, ready } = useStore();
@@ -42,8 +54,63 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-2.5 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className="size-9 shrink-0">
+              {profile.avatar && <AvatarImage src={profile.avatar} alt={profile.name} />}
+              <AvatarFallback>{profile.name.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight">{profile.name}</p>
+              <p className="truncate text-xs text-muted-foreground leading-tight">
+                {profile.email || "بدون ایمیل"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Link
+              to="/notifications"
+              className="relative flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted"
+              aria-label="اعلان‌ها"
+            >
+              <Bell className="size-5" />
+              {unread > 0 && (
+                <span className="absolute end-1 top-1 size-2 rounded-full bg-destructive" />
+              )}
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted"
+                aria-label="منوی کاربر"
+              >
+                <Settings className="size-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="truncate">{profile.name}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {MENU_NAV.map((item) => (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link to={item.to} className="flex items-center gap-2">
+                      <item.icon className="size-4" />
+                      <span className="flex-1">{item.label}</span>
+                      {item.to === "/notifications" && unread > 0 && (
+                        <span className="rounded-full bg-destructive px-1.5 text-[11px] text-destructive-foreground">
+                          {fa(unread)}
+                        </span>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-3 pb-24 pt-4 md:px-6 lg:pb-8">
-        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
+        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
           <div className="mb-4 px-2 pt-2">
             <p className="text-lg font-bold">مدیریت وظایف</p>
             <p className="text-xs text-muted-foreground">کاملاً آفلاین</p>
@@ -83,7 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-3xl items-stretch justify-between px-1">
-          {NAV.slice(0, 6).map((item) => {
+          {MOBILE_NAV.map((item) => {
             const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
             return (
               <Link
@@ -96,17 +163,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <item.icon className="size-5" />
                 {item.label}
-                {item.to === "/notifications" && unread > 0 && (
-                  <span className="absolute end-3 top-1 size-2 rounded-full bg-destructive" />
-                )}
               </Link>
             );
           })}
+          <Link
+            to="/profile"
+            className={cn(
+              "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors",
+              pathname.startsWith("/profile") ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <User className="size-5" />
+            پروفایل
+          </Link>
+          <Link
+            to="/settings"
+            className={cn(
+              "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors",
+              pathname.startsWith("/settings") ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Settings className="size-5" />
+            تنظیمات
+          </Link>
         </div>
       </nav>
     </div>
   );
 }
+
 
 export function PageHeader({
   title,

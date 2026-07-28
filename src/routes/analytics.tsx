@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -13,6 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import { Progress } from "@/components/ui/progress";
 import { isOverdue, useStore } from "@/lib/store";
@@ -34,8 +39,129 @@ export const Route = createFileRoute("/analytics")({
 const STATUS_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"];
 const PRIORITY_COLORS = ["var(--chart-4)", "var(--chart-2)", "var(--chart-5)"];
 
+type ChartType = "bar" | "line" | "pie";
+
+const CHART_OPTIONS: { value: ChartType; label: string }[] = [
+  { value: "bar", label: "ستونی" },
+  { value: "line", label: "خطی" },
+  { value: "pie", label: "دایره‌ای" },
+];
+
+function ChartTypePicker({
+  value,
+  onChange,
+}: {
+  value: ChartType;
+  onChange: (v: ChartType) => void;
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      size="sm"
+      value={value}
+      onValueChange={(v) => v && onChange(v as ChartType)}
+      className="rounded-xl border p-0.5"
+    >
+      {CHART_OPTIONS.map((o) => (
+        <ToggleGroupItem key={o.value} value={o.value} className="px-3 text-xs">
+          {o.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+type Datum = { name: string; value: number };
+
+function renderChart(type: ChartType, rows: Datum[], colors: string[]) {
+  if (type === "pie") {
+    return (
+      <PieChart>
+        <Pie data={rows} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
+          {rows.map((_, i) => (
+            <Cell key={i} fill={colors[i % colors.length]} />
+          ))}
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    );
+  }
+  if (type === "line") {
+    return (
+      <AreaChart data={rows}>
+        <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+        <Tooltip />
+        <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.2} />
+      </AreaChart>
+    );
+  }
+  return (
+    <BarChart data={rows}>
+      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+      <Tooltip />
+      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+        {rows.map((_, i) => (
+          <Cell key={i} fill={colors[i % colors.length]} />
+        ))}
+      </Bar>
+    </BarChart>
+  );
+}
+
+function renderTrend(type: ChartType, rows: { name: string }[]) {
+  const common = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+      <Tooltip />
+      <Legend />
+    </>
+  );
+  if (type === "line") {
+    return (
+      <LineChart data={rows}>
+        {common}
+        <Line type="monotone" dataKey="ایجادشده" stroke="var(--chart-1)" strokeWidth={2} />
+        <Line type="monotone" dataKey="تکمیل‌شده" stroke="var(--chart-3)" strokeWidth={2} />
+      </LineChart>
+    );
+  }
+  if (type === "pie") {
+    const totals = [
+      { name: "ایجادشده", value: rows.reduce((a, r) => a + (r as any)["ایجادشده"], 0) },
+      { name: "تکمیل‌شده", value: rows.reduce((a, r) => a + (r as any)["تکمیل‌شده"], 0) },
+    ];
+    return (
+      <PieChart>
+        <Pie data={totals} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
+          <Cell fill="var(--chart-1)" />
+          <Cell fill="var(--chart-3)" />
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    );
+  }
+  return (
+    <BarChart data={rows}>
+      {common}
+      <Bar dataKey="ایجادشده" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
+      <Bar dataKey="تکمیل‌شده" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
+    </BarChart>
+  );
+}
+
 function AnalyticsPage() {
   const { tasks } = useStore();
+  const [statusType, setStatusType] = useState<ChartType>("pie");
+  const [priorityType, setPriorityType] = useState<ChartType>("bar");
+  const [trendType, setTrendType] = useState<ChartType>("bar");
 
   const data = useMemo(() => {
     const completed = tasks.filter((t) => t.status === "COMPLETED").length;
@@ -109,53 +235,38 @@ function AnalyticsPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="surface p-4">
-          <p className="mb-3 font-semibold">توزیع وضعیت</p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold">توزیع وضعیت</p>
+            <ChartTypePicker value={statusType} onChange={setStatusType} />
+          </div>
           <div className="h-64" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data.statusData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
-                  {data.statusData.map((_, i) => (
-                    <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
+              {renderChart(statusType, data.statusData, STATUS_COLORS)}
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="surface p-4">
-          <p className="mb-3 font-semibold">توزیع اولویت</p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold">توزیع اولویت</p>
+            <ChartTypePicker value={priorityType} onChange={setPriorityType} />
+          </div>
           <div className="h-64" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data.priorityData} dataKey="value" nameKey="name" outerRadius={90}>
-                  {data.priorityData.map((_, i) => (
-                    <Cell key={i} fill={PRIORITY_COLORS[i % PRIORITY_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
+              {renderChart(priorityType, data.priorityData, PRIORITY_COLORS)}
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
       <div className="surface p-4">
-        <p className="mb-3 font-semibold">روند ۶ ماه اخیر</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="font-semibold">روند ۶ ماه اخیر</p>
+          <ChartTypePicker value={trendType} onChange={setTrendType} />
+        </div>
         <div className="h-72" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.months}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="ایجادشده" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="تکمیل‌شده" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
-            </BarChart>
+            {renderTrend(trendType, data.months)}
           </ResponsiveContainer>
         </div>
       </div>

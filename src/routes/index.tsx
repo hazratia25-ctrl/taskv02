@@ -119,7 +119,7 @@ function Dashboard() {
   return (
     <div className="space-y-7">
       <PageHeader
-        title={profile ? `سلام ${profile.name} 👋` : "داشبورد"}
+        title={profile ? `سلام ${profile.name}` : "داشبورد"}
         description="نمای کلی وضعیت وظایف شما — کاملاً آفلاین"
         action={
           <Button
