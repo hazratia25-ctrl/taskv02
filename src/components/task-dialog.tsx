@@ -79,6 +79,31 @@ export function TaskDialog({
 
   const tagMap = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
 
+  const resetForm = () => {
+    setForm(
+      task
+        ? {
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            categoryId: task.categoryId,
+            tagIds: task.tagIds,
+            dueDate: task.dueDate,
+          }
+        : {
+            title: "",
+            description: "",
+            status: "TODO",
+            priority: "MEDIUM",
+            categoryId: null,
+            tagIds: [],
+            dueDate: defaultDueDate ?? null,
+          },
+    );
+    setError("");
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (form.title.trim().length < 2) {
