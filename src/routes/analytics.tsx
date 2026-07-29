@@ -129,19 +129,14 @@ function renderChart(type: ChartType, rows: Datum[], colors: string[]) {
 type TrendRow = { name: string; ایجادشده: number; تکمیل‌شده: number };
 
 function renderTrend(type: ChartType, rows: TrendRow[]) {
-  const common = (
-    <>
-      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-      <Tooltip />
-      <Legend />
-    </>
-  );
   if (type === "line") {
     return (
       <LineChart data={rows}>
-        {common}
+        <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+        <Tooltip />
+        <Legend />
         <Line type="monotone" dataKey="ایجادشده" stroke="var(--chart-1)" strokeWidth={2} />
         <Line type="monotone" dataKey="تکمیل‌شده" stroke="var(--chart-3)" strokeWidth={2} />
       </LineChart>
@@ -165,12 +160,17 @@ function renderTrend(type: ChartType, rows: TrendRow[]) {
   }
   return (
     <BarChart data={rows}>
-      {common}
+      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+      <Tooltip />
+      <Legend />
       <Bar dataKey="ایجادشده" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
       <Bar dataKey="تکمیل‌شده" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
     </BarChart>
   );
 }
+
 
 function AnalyticsPage() {
   const { tasks } = useStore();
