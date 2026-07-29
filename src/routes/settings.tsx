@@ -226,7 +226,6 @@ function SettingsPage() {
             placeholder="برچسب جدید"
           />
           <Button
-            variant="secondary"
             onClick={() => {
               if (!tagName.trim()) return;
               createTag(tagName.trim());
@@ -234,7 +233,7 @@ function SettingsPage() {
               toast.success("برچسب اضافه شد");
             }}
           >
-            افزودن
+            <Plus className="size-4" /> افزودن
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">

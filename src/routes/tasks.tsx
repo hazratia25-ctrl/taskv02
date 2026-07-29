@@ -165,17 +165,7 @@ function TasksPage() {
     <div className="space-y-5">
       <PageHeader
         title="وظایف"
-        description="جست‌وجو، فیلتر و مرتب‌سازی — همه‌چیز محلی و بدون اینترنت"
-        action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          >
-            <Plus className="size-4" /> وظیفه جدید
-          </Button>
-        }
+        description="جست‌وجو، فیلتر و مرتب‌سازی"
       />
 
       <div className="surface space-y-4 p-4">

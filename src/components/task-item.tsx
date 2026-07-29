@@ -136,6 +136,7 @@ export function TaskItem({ task, onEdit }: { task: Task; onEdit: (t: Task) => vo
               </AlertDialogHeader>
               <AlertDialogFooter className="gap-2 sm:justify-start">
                 <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={() => {
                     deleteTask(task.id);
                     toast.success("وظیفه حذف شد");
