@@ -8,6 +8,7 @@ import {
   Bell,
   Settings,
   User,
+  Menu,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -57,12 +58,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-2.5 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar className="size-9 shrink-0">
+            <Avatar className="size-9 shrink-0 rounded-lg">
               {profile.avatar && <AvatarImage src={profile.avatar} alt={profile.name} />}
-              <AvatarFallback>{profile.name.slice(0, 2)}</AvatarFallback>
+              <AvatarFallback className="rounded-lg">{profile.name.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-tight">{profile.name}</p>
+              <p className="truncate text-sm font-semibold leading-tight">
+                {profile.role ? `${profile.role} | ${profile.name}` : profile.name}
+              </p>
               <p className="truncate text-xs text-muted-foreground leading-tight">
                 {profile.email || "بدون ایمیل"}
               </p>
@@ -85,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted"
                 aria-label="منوی کاربر"
               >
-                <Settings className="size-5" />
+                <Menu className="size-5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel className="truncate">{profile.name}</DropdownMenuLabel>
@@ -166,26 +169,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          <Link
-            to="/profile"
-            className={cn(
-              "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors",
-              pathname.startsWith("/profile") ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            <User className="size-5" />
-            پروفایل
-          </Link>
-          <Link
-            to="/settings"
-            className={cn(
-              "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors",
-              pathname.startsWith("/settings") ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            <Settings className="size-5" />
-            تنظیمات
-          </Link>
         </div>
       </nav>
     </div>
