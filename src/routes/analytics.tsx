@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -23,6 +23,10 @@ import { Progress } from "@/components/ui/progress";
 import { isOverdue, useStore } from "@/lib/store";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/types";
 import { JALALI_MONTHS, fa, toJalali } from "@/lib/jalali";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { toPng } from "html-to-image";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({
@@ -173,9 +177,13 @@ function AnalyticsPage() {
   const [statusType, setStatusType] = useState<ChartType>("pie");
   const [priorityType, setPriorityType] = useState<ChartType>("bar");
   const [trendType, setTrendType] = useState<ChartType>("bar");
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   const data = useMemo(() => {
     const completed = tasks.filter((t) => t.status === "COMPLETED").length;
+    const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
+    const high = tasks.filter((t) => t.priority === "HIGH" && t.status !== "COMPLETED").length;
     const statusData = (["TODO", "IN_PROGRESS", "COMPLETED"] as const).map((s) => ({
       name: STATUS_LABELS[s],
       value: tasks.filter((t) => t.status === s).length,
@@ -185,25 +193,31 @@ function AnalyticsPage() {
       value: tasks.filter((t) => t.priority === p).length,
     }));
 
-    const months: { name: string; ایجادشده: number; تکمیل‌شده: number }[] = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 15);
-      const j = toJalali(d);
+    const today = toJalali(new Date());
+    const months: TrendRow[] = [];
+    for (let i = 2; i >= 0; i--) {
+      let jm = today.jm - i;
+      let jy = today.jy;
+      while (jm <= 0) {
+        jm += 12;
+        jy -= 1;
+      }
       const inMonth = (iso: string | null) => {
         if (!iso) return false;
         const jj = toJalali(new Date(iso));
-        return jj.jy === j.jy && jj.jm === j.jm;
+        return jj.jy === jy && jj.jm === jm;
       };
       months.push({
-        name: JALALI_MONTHS[j.jm - 1],
-        ایجادشده: tasks.filter((t) => inMonth(t.createdAt)).length,
-        تکمیل‌شده: tasks.filter((t) => inMonth(t.completedAt)).length,
+        name: `${JALALI_MONTHS[jm - 1]} ${fa(jy)}`,
+        "ایجادشده": tasks.filter((t) => inMonth(t.createdAt)).length,
+        "تکمیل\u200cشده": tasks.filter((t) => inMonth(t.completedAt)).length,
       });
     }
 
     return {
       completed,
+      inProgress,
+      high,
       overdue: tasks.filter(isOverdue).length,
       rate: tasks.length ? Math.round((completed / tasks.length) * 100) : 0,
       statusData,
@@ -211,6 +225,26 @@ function AnalyticsPage() {
       months,
     };
   }, [tasks]);
+
+  const exportImage = async () => {
+    if (!reportRef.current) return;
+    setExporting(true);
+    try {
+      const dataUrl = await toPng(reportRef.current, {
+        pixelRatio: 2,
+        backgroundColor: getComputedStyle(document.body).backgroundColor || "#ffffff",
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `gozaresh-amar-${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+      toast.success("تصویر گزارش ذخیره شد");
+    } catch {
+      toast.error("تهیه تصویر گزارش ناموفق بود");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (tasks.length === 0) {
     return (
@@ -223,62 +257,77 @@ function AnalyticsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="آمار و تحلیل" description="محاسبه‌شده از داده‌های محلی شما" />
+      <PageHeader
+        title="آمار و تحلیل"
+        description="محاسبه‌شده از داده‌های محلی شما"
+        action={
+          <Button onClick={exportImage} disabled={exporting}>
+            <Download className="size-4" /> {exporting ? "در حال آماده‌سازی…" : "گزارش تصویری"}
+          </Button>
+        }
+      />
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { label: "کل وظایف", value: fa(tasks.length) },
-          { label: "تکمیل‌شده", value: fa(data.completed) },
-          { label: "عقب‌افتاده", value: fa(data.overdue) },
-          { label: "نرخ تکمیل", value: `${fa(data.rate)}٪` },
-        ].map((s) => (
-          <div key={s.label} className="surface p-4">
-            <p className="text-2xl font-bold">{s.value}</p>
-            <p className="text-xs text-muted-foreground">{s.label}</p>
+      <div ref={reportRef} className="space-y-5 bg-background p-1">
+        <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          {[
+            { label: "کل وظایف", value: fa(tasks.length) },
+            { label: "در حال انجام", value: fa(data.inProgress) },
+            { label: "انجام‌شده", value: fa(data.completed) },
+            { label: "اولویت بالا", value: fa(data.high) },
+            { label: "عقب‌افتاده", value: fa(data.overdue) },
+            { label: "نرخ تکمیل", value: `${fa(data.rate)}٪` },
+          ].map((s) => (
+            <div key={s.label} className="surface p-4">
+              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="surface p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="font-semibold">پیشرفت کلی</p>
+            <p className="text-sm text-muted-foreground">{fa(data.rate)}٪</p>
           </div>
-        ))}
-      </div>
+          <Progress value={data.rate} />
+        </div>
 
-      <div className="surface p-5">
-        <p className="mb-2 font-semibold">پیشرفت کلی</p>
-        <Progress value={data.rate} />
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="surface p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold">توزیع وضعیت</p>
-            <ChartTypePicker value={statusType} onChange={setStatusType} />
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="surface p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold">توزیع وضعیت</p>
+              <ChartTypePicker value={statusType} onChange={setStatusType} />
+            </div>
+            <div className="h-64" dir="ltr">
+              <ResponsiveContainer width="100%" height="100%">
+                {renderChart(statusType, data.statusData, STATUS_COLORS)}
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div className="h-64" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              {renderChart(statusType, data.statusData, STATUS_COLORS)}
-            </ResponsiveContainer>
+
+          <div className="surface p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold">توزیع اولویت</p>
+              <ChartTypePicker value={priorityType} onChange={setPriorityType} />
+            </div>
+            <div className="h-64" dir="ltr">
+              <ResponsiveContainer width="100%" height="100%">
+                {renderChart(priorityType, data.priorityData, PRIORITY_COLORS)}
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
         <div className="surface p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold">توزیع اولویت</p>
-            <ChartTypePicker value={priorityType} onChange={setPriorityType} />
+            <p className="font-semibold">روند ۳ ماه اخیر</p>
+            <ChartTypePicker value={trendType} onChange={setTrendType} />
           </div>
-          <div className="h-64" dir="ltr">
+          <div className="h-72" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
-              {renderChart(priorityType, data.priorityData, PRIORITY_COLORS)}
+              {renderTrend(trendType, data.months)}
             </ResponsiveContainer>
           </div>
-        </div>
-      </div>
-
-      <div className="surface p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="font-semibold">روند ۶ ماه اخیر</p>
-          <ChartTypePicker value={trendType} onChange={setTrendType} />
-        </div>
-        <div className="h-72" dir="ltr">
-          <ResponsiveContainer width="100%" height="100%">
-            {renderTrend(trendType, data.months)}
-          </ResponsiveContainer>
         </div>
       </div>
     </div>
