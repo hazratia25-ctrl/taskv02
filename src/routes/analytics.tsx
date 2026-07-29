@@ -209,7 +209,7 @@ function AnalyticsPage() {
       };
       months.push({
         name: `${JALALI_MONTHS[jm - 1]} ${fa(jy)}`,
-        "ایجادشده": tasks.filter((t) => inMonth(t.createdAt)).length,
+        ایجادشده: tasks.filter((t) => inMonth(t.createdAt)).length,
         "تکمیل\u200cشده": tasks.filter((t) => inMonth(t.completedAt)).length,
       });
     }
@@ -232,6 +232,7 @@ function AnalyticsPage() {
     try {
       const dataUrl = await toPng(reportRef.current, {
         pixelRatio: 2,
+        skipFonts: true,
         backgroundColor: getComputedStyle(document.body).backgroundColor || "#ffffff",
       });
       const a = document.createElement("a");

@@ -58,7 +58,9 @@ function ProfilePage() {
       <div className="surface flex items-center gap-4 p-5">
         <Avatar className="size-16 rounded-xl">
           {profile?.avatar && <AvatarImage src={profile.avatar} alt={profile.name} />}
-          <AvatarFallback className="rounded-xl">{(profile?.name ?? "؟").slice(0, 2)}</AvatarFallback>
+          <AvatarFallback className="rounded-xl">
+            {(profile?.name ?? "؟").slice(0, 2)}
+          </AvatarFallback>
         </Avatar>
         <div>
           <p className="text-lg font-bold">

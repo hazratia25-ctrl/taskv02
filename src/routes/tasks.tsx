@@ -163,10 +163,7 @@ function TasksPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="وظایف"
-        description="جست‌وجو، فیلتر و مرتب‌سازی"
-      />
+      <PageHeader title="وظایف" description="جست‌وجو، فیلتر و مرتب‌سازی" />
 
       <div className="surface space-y-4 p-4">
         <div className="relative">
