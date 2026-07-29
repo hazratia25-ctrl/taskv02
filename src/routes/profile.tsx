@@ -29,6 +29,7 @@ function ProfilePage() {
   const { profile, saveProfile, tasks } = useStore();
   const [name, setName] = useState(profile?.name ?? "");
   const [email, setEmail] = useState(profile?.email ?? "");
+  const [role, setRole] = useState(profile?.role ?? "");
   const [avatar, setAvatar] = useState(profile?.avatar ?? "");
   const [error, setError] = useState("");
 
@@ -39,7 +40,12 @@ function ProfilePage() {
       return;
     }
     setError("");
-    saveProfile({ name: name.trim(), email: email.trim(), avatar: avatar.trim() || null });
+    saveProfile({
+      name: name.trim(),
+      role: role.trim(),
+      email: email.trim(),
+      avatar: avatar.trim() || null,
+    });
     toast.success("پروفایل ذخیره شد");
   };
 
@@ -50,12 +56,16 @@ function ProfilePage() {
       <PageHeader title="پروفایل" description="اطلاعات شما فقط روی این دستگاه ذخیره می‌شود" />
 
       <div className="surface flex items-center gap-4 p-5">
-        <Avatar className="size-16">
+        <Avatar className="size-16 rounded-xl">
           {profile?.avatar && <AvatarImage src={profile.avatar} alt={profile.name} />}
-          <AvatarFallback>{(profile?.name ?? "؟").slice(0, 2)}</AvatarFallback>
+          <AvatarFallback className="rounded-xl">
+            {(profile?.name ?? "؟").slice(0, 2)}
+          </AvatarFallback>
         </Avatar>
         <div>
-          <p className="text-lg font-bold">{profile?.name}</p>
+          <p className="text-lg font-bold">
+            {profile?.role ? `${profile.role} | ${profile.name}` : profile?.name}
+          </p>
           <p className="text-sm text-muted-foreground">{profile?.email || "بدون ایمیل"}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             عضو از {formatJalali(profile?.createdAt ?? null)} — {fa(tasks.length)} وظیفه،{" "}
@@ -68,6 +78,15 @@ function ProfilePage() {
         <div className="space-y-2">
           <Label htmlFor="p-name">نام</Label>
           <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="p-role">نقش کاربر</Label>
+          <Input
+            id="p-role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            placeholder="مثلاً کارشناس"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="p-email">ایمیل</Label>

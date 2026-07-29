@@ -8,7 +8,7 @@ import { isOverdue, useStore } from "@/lib/store";
 import { STATUS_LABELS, type Task, type TaskStatus } from "@/lib/types";
 import { fa, formatJalali } from "@/lib/jalali";
 import { cn } from "@/lib/utils";
-import { Plus, GripVertical, ArrowLeftRight } from "lucide-react";
+import { GripVertical, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/kanban")({
@@ -62,16 +62,6 @@ function KanbanPage() {
       <PageHeader
         title="تخته کانبان"
         description="کارت‌ها را بکشید و رها کنید یا با دکمه جابه‌جا کنید"
-        action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          >
-            <Plus className="size-4" /> وظیفه جدید
-          </Button>
-        }
       />
 
       <div className="grid gap-4 lg:grid-cols-3">

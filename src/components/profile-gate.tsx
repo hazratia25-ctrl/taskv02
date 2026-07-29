@@ -8,6 +8,7 @@ import { CheckCircle2 } from "lucide-react";
 export function ProfileGate() {
   const { saveProfile } = useStore();
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
   const [error, setError] = useState("");
@@ -18,7 +19,12 @@ export function ProfileGate() {
       setError("لطفاً نام خود را وارد کنید (حداقل ۲ نویسه).");
       return;
     }
-    saveProfile({ name: name.trim(), email: email.trim(), avatar: avatar.trim() || null });
+    saveProfile({
+      name: name.trim(),
+      role: role.trim(),
+      email: email.trim(),
+      avatar: avatar.trim() || null,
+    });
   };
 
   return (
@@ -41,6 +47,15 @@ export function ProfileGate() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="مثلاً زهرا"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="role">نقش (اختیاری)</Label>
+            <Input
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="مثلاً کارشناس"
             />
           </div>
           <div className="space-y-2">

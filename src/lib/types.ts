@@ -42,6 +42,7 @@ export interface AppNotification {
 
 export interface UserProfile {
   name: string;
+  role: string;
   email: string;
   avatar: string | null;
   createdAt: string;
