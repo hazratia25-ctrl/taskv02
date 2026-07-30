@@ -129,16 +129,70 @@ function buildNotifications(tasks: Task[], existing: AppNotification[], reminder
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<AppData>(emptyData);
   const [ready, setReady] = useState(false);
   const hydrated = useRef(false);
+  const syncUserId = useRef<string | null>(null);
 
+  // load: cloud when signed in, local cache otherwise
   useEffect(() => {
-    const loaded = load();
-    setData(loaded);
-    hydrated.current = true;
-    setReady(true);
-  }, []);
+    if (authLoading) return;
+    let cancelled = false;
+
+    if (!user) {
+      syncUserId.current = null;
+      const loaded = load();
+      setData(loaded);
+      hydrated.current = true;
+      setReady(true);
+      return;
+    }
+
+    setReady(false);
+    hydrated.current = false;
+    (async () => {
+      const local = load();
+      let snapshot;
+      try {
+        snapshot = await fetchCloud(user.id);
+      } catch {
+        if (cancelled) return;
+        // offline: fall back to local cache
+        setData(local);
+        hydrated.current = true;
+        setReady(true);
+        return;
+      }
+      if (cancelled) return;
+
+      const cloudEmpty =
+        snapshot.tasks.length === 0 &&
+        snapshot.categories.length === 0 &&
+        snapshot.tags.length === 0;
+      const localHasData =
+        local.tasks.length > 0 || local.categories.length > 0 || local.tags.length > 0;
+
+      const next: AppData = {
+        version: 1,
+        tasks: cloudEmpty && localHasData ? local.tasks : snapshot.tasks,
+        categories: cloudEmpty && localHasData ? local.categories : snapshot.categories,
+        tags: cloudEmpty && localHasData ? local.tags : snapshot.tags,
+        notifications: cloudEmpty && localHasData ? local.notifications : snapshot.notifications,
+        profile: snapshot.profile ?? local.profile,
+        settings: snapshot.settings,
+      };
+
+      setData(next);
+      hydrated.current = true;
+      syncUserId.current = user.id;
+      setReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (!hydrated.current) return;
@@ -148,6 +202,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       /* quota errors ignored */
     }
   }, [data]);
+
+  // debounced write-through sync to the cloud
+  useEffect(() => {
+    if (!hydrated.current || !user || syncUserId.current !== user.id) return;
+    const t = window.setTimeout(() => {
+      pushCloud(user.id, data).catch(() => {
+        /* offline: local cache keeps the data until next sync */
+      });
+    }, 900);
+    return () => window.clearTimeout(t);
+  }, [data, user]);
 
   // theme
   useEffect(() => {
