@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import {
   defaultSettings,
   type AppData,
@@ -149,13 +150,13 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
       role: data.profile.role ?? "",
       email: data.profile.email ?? "",
       avatar: data.profile.avatar,
-      settings: data.settings as unknown as Record<string, unknown>,
+      settings: data.settings as unknown as Json,
       updated_at: new Date().toISOString(),
     });
   } else {
     await supabase
       .from("profiles")
-      .update({ settings: data.settings as unknown as Record<string, unknown> })
+      .update({ settings: data.settings as unknown as Json })
       .eq("id", userId);
   }
 }
