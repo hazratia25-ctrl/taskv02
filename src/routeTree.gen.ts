@@ -16,8 +16,11 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicPushKeyRouteImport } from './routes/api/public/push/key'
+import { Route as ApiPublicHooksPushRemindersRouteImport } from './routes/api/public/hooks/push-reminders'
 
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
@@ -54,6 +57,11 @@ const CalendarRoute = CalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -64,10 +72,22 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPushKeyRoute = ApiPublicPushKeyRouteImport.update({
+  id: '/api/public/push/key',
+  path: '/api/public/push/key',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksPushRemindersRoute =
+  ApiPublicHooksPushRemindersRouteImport.update({
+    id: '/api/public/hooks/push-reminders',
+    path: '/api/public/hooks/push-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
@@ -75,10 +95,13 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
+  '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
@@ -86,11 +109,14 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
+  '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
@@ -98,12 +124,15 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
+  '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/analytics'
+    | '/auth'
     | '/calendar'
     | '/kanban'
     | '/notifications'
@@ -111,10 +140,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/api/public/hooks/push-reminders'
+    | '/api/public/push/key'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/analytics'
+    | '/auth'
     | '/calendar'
     | '/kanban'
     | '/notifications'
@@ -122,10 +154,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/api/public/hooks/push-reminders'
+    | '/api/public/push/key'
   id:
     | '__root__'
     | '/'
     | '/analytics'
+    | '/auth'
     | '/calendar'
     | '/kanban'
     | '/notifications'
@@ -133,11 +168,14 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/api/public/hooks/push-reminders'
+    | '/api/public/push/key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   KanbanRoute: typeof KanbanRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -145,6 +183,8 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TasksRoute: typeof TasksRoute
+  ApiPublicHooksPushRemindersRoute: typeof ApiPublicHooksPushRemindersRoute
+  ApiPublicPushKeyRoute: typeof ApiPublicPushKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -198,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analytics': {
       id: '/analytics'
       path: '/analytics'
@@ -212,12 +259,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/push/key': {
+      id: '/api/public/push/key'
+      path: '/api/public/push/key'
+      fullPath: '/api/public/push/key'
+      preLoaderRoute: typeof ApiPublicPushKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/push-reminders': {
+      id: '/api/public/hooks/push-reminders'
+      path: '/api/public/hooks/push-reminders'
+      fullPath: '/api/public/hooks/push-reminders'
+      preLoaderRoute: typeof ApiPublicHooksPushRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
+  AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   KanbanRoute: KanbanRoute,
   NotificationsRoute: NotificationsRoute,
@@ -225,17 +287,9 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TasksRoute: TasksRoute,
+  ApiPublicHooksPushRemindersRoute: ApiPublicHooksPushRemindersRoute,
+  ApiPublicPushKeyRoute: ApiPublicPushKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -28,6 +28,7 @@ import { useStore } from "@/lib/store";
 import type { ThemeMode } from "@/lib/types";
 import { fa, formatJalali } from "@/lib/jalali";
 import { Download, Plus, Trash2, Upload, X } from "lucide-react";
+import { PushSettings } from "@/components/push-settings";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
@@ -146,7 +147,9 @@ function SettingsPage() {
             onCheckedChange={(v) => updateSettings({ notificationsEnabled: v })}
           />
         </div>
+        <PushSettings />
       </section>
+
 
       <section className="surface space-y-4 p-5">
         <h2 className="font-semibold">دسته‌بندی‌ها</h2>

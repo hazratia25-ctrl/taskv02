@@ -1,4 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   ListChecks,
@@ -9,8 +10,10 @@ import {
   Settings,
   User,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { fa } from "@/lib/jalali";
 import { ProfileGate } from "./profile-gate";
@@ -38,20 +41,33 @@ const NAV = [
 const MOBILE_NAV = NAV.slice(0, 5);
 const MENU_NAV = NAV.slice(5);
 
+function Loading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+      در حال بارگذاری…
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { notifications, profile, ready } = useStore();
+  const { user, loading: authLoading, signOut } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const unread = notifications.filter((n) => !n.isRead).length;
+  const isAuthRoute = pathname.startsWith("/auth");
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        در حال بارگذاری…
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!authLoading && !user && !isAuthRoute) {
+      navigate({ to: "/auth", replace: true });
+    }
+  }, [authLoading, user, isAuthRoute, navigate]);
 
-  if (!profile) return <ProfileGate />;
+  if (isAuthRoute) return <>{children}</>;
+  if (authLoading || !user) return <Loading />;
+  if (!ready) return <Loading />;
+  if (!profile || !profile.name) return <ProfileGate />;
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,6 +122,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={async () => {
+                    await signOut();
+                    navigate({ to: "/auth", replace: true });
+                  }}
+                >
+                  <LogOut className="size-4" />
+                  <span>خروج از حساب</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -116,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
           <div className="mb-4 px-2 pt-2">
             <p className="text-lg font-bold">مدیریت وظایف</p>
-            <p className="text-xs text-muted-foreground">کاملاً آفلاین</p>
+            <p className="text-xs text-muted-foreground">همگام با حساب آنلاین</p>
           </div>
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => {
@@ -144,7 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="mt-auto rounded-xl bg-sidebar-accent p-3 text-xs text-sidebar-accent-foreground">
-            داده‌ها فقط روی همین دستگاه ذخیره می‌شوند.
+            داده‌ها در حساب آنلاین شما ذخیره و بین دستگاه‌ها همگام می‌شوند.
           </div>
         </aside>
 
