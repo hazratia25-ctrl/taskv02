@@ -146,7 +146,9 @@ function SettingsPage() {
             onCheckedChange={(v) => updateSettings({ notificationsEnabled: v })}
           />
         </div>
+        <PushSettings />
       </section>
+
 
       <section className="surface space-y-4 p-5">
         <h2 className="font-semibold">دسته‌بندی‌ها</h2>
