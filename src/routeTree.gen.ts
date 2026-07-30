@@ -20,6 +20,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicPushKeyRouteImport } from './routes/api/public/push/key'
+import { Route as ApiPublicHooksPushRemindersRouteImport } from './routes/api/public/hooks/push-reminders'
 
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
@@ -76,6 +77,12 @@ const ApiPublicPushKeyRoute = ApiPublicPushKeyRouteImport.update({
   path: '/api/public/push/key',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksPushRemindersRoute =
+  ApiPublicHooksPushRemindersRouteImport.update({
+    id: '/api/public/hooks/push-reminders',
+    path: '/api/public/hooks/push-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
   '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +109,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
   '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
 export interface FileRoutesById {
@@ -115,6 +124,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
   '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/api/public/hooks/push-reminders'
     | '/api/public/push/key'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/api/public/hooks/push-reminders'
     | '/api/public/push/key'
   id:
     | '__root__'
@@ -156,6 +168,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/api/public/hooks/push-reminders'
     | '/api/public/push/key'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +183,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TasksRoute: typeof TasksRoute
+  ApiPublicHooksPushRemindersRoute: typeof ApiPublicHooksPushRemindersRoute
   ApiPublicPushKeyRoute: typeof ApiPublicPushKeyRoute
 }
 
@@ -252,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPushKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/push-reminders': {
+      id: '/api/public/hooks/push-reminders'
+      path: '/api/public/hooks/push-reminders'
+      fullPath: '/api/public/hooks/push-reminders'
+      preLoaderRoute: typeof ApiPublicHooksPushRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -266,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TasksRoute: TasksRoute,
+  ApiPublicHooksPushRemindersRoute: ApiPublicHooksPushRemindersRoute,
   ApiPublicPushKeyRoute: ApiPublicPushKeyRoute,
 }
 export const routeTree = rootRouteImport

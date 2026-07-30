@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/public/hooks/push-reminders")({
               },
               vapid,
             );
-            const res = await fetch(sub.endpoint, payload);
+            const res = await fetch(sub.endpoint, payload as unknown as RequestInit);
             if (res.status === 404 || res.status === 410) stale.push(sub.id);
             else if (res.ok) sent += 1;
           } catch {
