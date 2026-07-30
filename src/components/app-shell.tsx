@@ -143,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
           <div className="mb-4 px-2 pt-2">
             <p className="text-lg font-bold">مدیریت وظایف</p>
-            <p className="text-xs text-muted-foreground">کاملاً آفلاین</p>
+            <p className="text-xs text-muted-foreground">همگام با حساب آنلاین</p>
           </div>
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => {
@@ -171,7 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="mt-auto rounded-xl bg-sidebar-accent p-3 text-xs text-sidebar-accent-foreground">
-            داده‌ها فقط روی همین دستگاه ذخیره می‌شوند.
+            داده‌ها در حساب آنلاین شما ذخیره و بین دستگاه‌ها همگام می‌شوند.
           </div>
         </aside>
 
