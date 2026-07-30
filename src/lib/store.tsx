@@ -21,6 +21,8 @@ import {
   type UserProfile,
 } from "./types";
 import { daysBetween, formatJalali } from "./jalali";
+import { useAuth } from "./auth";
+import { fetchCloud, pushCloud } from "./cloud";
 
 const STORAGE_KEY = "task-manager-offline-v1";
 
