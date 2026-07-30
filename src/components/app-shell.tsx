@@ -1,4 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   ListChecks,
@@ -9,8 +10,10 @@ import {
   Settings,
   User,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { fa } from "@/lib/jalali";
 import { ProfileGate } from "./profile-gate";
@@ -38,20 +41,33 @@ const NAV = [
 const MOBILE_NAV = NAV.slice(0, 5);
 const MENU_NAV = NAV.slice(5);
 
+function Loading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+      در حال بارگذاری…
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { notifications, profile, ready } = useStore();
+  const { user, loading: authLoading, signOut } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const unread = notifications.filter((n) => !n.isRead).length;
+  const isAuthRoute = pathname.startsWith("/auth");
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        در حال بارگذاری…
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!authLoading && !user && !isAuthRoute) {
+      navigate({ to: "/auth", replace: true });
+    }
+  }, [authLoading, user, isAuthRoute, navigate]);
 
-  if (!profile) return <ProfileGate />;
+  if (isAuthRoute) return <>{children}</>;
+  if (authLoading || !user) return <Loading />;
+  if (!ready) return <Loading />;
+  if (!profile || !profile.name) return <ProfileGate />;
+
 
   return (
     <div className="min-h-screen bg-background">
