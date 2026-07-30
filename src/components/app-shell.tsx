@@ -122,6 +122,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={async () => {
+                    await signOut();
+                    navigate({ to: "/auth", replace: true });
+                  }}
+                >
+                  <LogOut className="size-4" />
+                  <span>خروج از حساب</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
