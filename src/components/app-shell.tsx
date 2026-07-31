@@ -30,6 +30,7 @@ import {
 const NAV = [
   { to: "/", label: "داشبورد", icon: LayoutDashboard },
   { to: "/tasks", label: "وظایف", icon: ListChecks },
+  { to: "/projects", label: "پروژه‌ها", icon: FolderKanban },
   { to: "/kanban", label: "کانبان", icon: KanbanSquare },
   { to: "/calendar", label: "تقویم", icon: CalendarDays },
   { to: "/analytics", label: "آمار", icon: BarChart3 },
@@ -40,6 +41,7 @@ const NAV = [
 
 const MOBILE_NAV = NAV.slice(0, 5);
 const MENU_NAV = NAV.slice(5);
+
 
 function Loading() {
   return (
