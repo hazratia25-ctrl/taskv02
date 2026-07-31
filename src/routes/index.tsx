@@ -5,10 +5,20 @@ import { TaskItem } from "@/components/task-item";
 import { TaskDialog } from "@/components/task-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { isOverdue, useStore } from "@/lib/store";
+import { isOverdue, projectProgress, useStore } from "@/lib/store";
 import { fa, daysBetween } from "@/lib/jalali";
 import type { Task } from "@/lib/types";
-import { Plus, ListTodo, CheckCircle2, Loader2, AlertTriangle, Flame } from "lucide-react";
+import {
+  Plus,
+  ListTodo,
+  CheckCircle2,
+  Loader2,
+  AlertTriangle,
+  Flame,
+  FolderKanban,
+  Users,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -82,7 +92,7 @@ function Section({
 }
 
 function Dashboard() {
-  const { tasks, profile } = useStore();
+  const { tasks, projects } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
 
@@ -142,7 +152,7 @@ function Dashboard() {
               setOpen(true);
             }}
           >
-            <Plus className="size-4" /> وظیفه جدید
+            <Plus className="size-4" /> ایجاد وظیفه یا پروژه
           </Button>
         }
       />
@@ -164,6 +174,52 @@ function Dashboard() {
         <Progress value={stats.rate} />
       </div>
 
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <FolderKanban className="size-5 text-primary" /> پروژه‌ها
+          </h2>
+          <Link to="/projects" className="text-sm text-primary hover:underline">
+            مشاهده همه پروژه‌ها →
+          </Link>
+        </div>
+        {projects.length === 0 ? (
+          <div className="surface p-4 text-sm text-muted-foreground">
+            هنوز پروژه‌ای ندارید. با دکمه بالا و انتخاب «پروژه» اولین پروژه را بسازید.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {projects.slice(0, 4).map((pr) => (
+              <Link
+                key={pr.id}
+                to="/projects"
+                className="surface lift space-y-3 p-4 transition-colors"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{pr.title}</p>
+                  <Badge variant="outline">{fa(projectProgress(pr))}٪</Badge>
+                </div>
+                <Progress value={projectProgress(pr)} />
+                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <span>
+                    مراحل: {fa((pr.stages ?? []).filter((st) => st.done).length)} از{" "}
+                    {fa((pr.stages ?? []).length)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="size-3.5" /> {fa((pr.members ?? []).length)} عضو
+                  </span>
+                  {(pr.members ?? []).slice(0, 2).map((m) => (
+                    <span key={m.id}>
+                      {m.name} | {m.role}
+                    </span>
+                  ))}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
       {tasks.length === 0 ? (
         <EmptyState
           title="هنوز وظیفه‌ای ایجاد نکرده‌اید"
@@ -175,7 +231,7 @@ function Dashboard() {
                 setOpen(true);
               }}
             >
-              <Plus className="size-4" /> ایجاد اولین وظیفه
+              <Plus className="size-4" /> ایجاد اولین مورد
             </Button>
           }
         />
