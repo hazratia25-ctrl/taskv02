@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as KanbanRouteImport } from './routes/kanban'
@@ -35,6 +36,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/projects': typeof ProjectsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/projects': typeof ProjectsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/kanban': typeof KanbanRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/projects': typeof ProjectsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/notifications'
     | '/profile'
+    | '/projects'
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/notifications'
     | '/profile'
+    | '/projects'
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/notifications'
     | '/profile'
+    | '/projects'
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
@@ -180,6 +192,7 @@ export interface RootRouteChildren {
   KanbanRoute: typeof KanbanRoute
   NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
+  ProjectsRoute: typeof ProjectsRoute
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TasksRoute: typeof TasksRoute
@@ -208,6 +221,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -284,6 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   KanbanRoute: KanbanRoute,
   NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
+  ProjectsRoute: ProjectsRoute,
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TasksRoute: TasksRoute,

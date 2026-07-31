@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ListChecks,
   KanbanSquare,
+  FolderKanban,
   CalendarDays,
   BarChart3,
   Bell,
@@ -73,27 +74,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-2.5 md:px-6">
+      <header className="sticky top-0 z-50 border-b bg-gradient-to-l from-primary/10 via-card to-card/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-4 md:px-6 md:py-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar className="size-9 shrink-0 rounded-lg">
+            <Avatar className="size-12 shrink-0 rounded-xl ring-2 ring-primary/25 md:size-14">
               {profile.avatar && <AvatarImage src={profile.avatar} alt={profile.name} />}
-              <AvatarFallback className="rounded-lg">{profile.name.slice(0, 2)}</AvatarFallback>
+              <AvatarFallback className="rounded-xl bg-primary/12 text-base font-bold text-primary">
+                {profile.name.slice(0, 2)}
+              </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-tight">
+              <p className="truncate text-base font-bold leading-snug md:text-lg">
                 {profile.role ? `${profile.role} | ${profile.name}` : profile.name}
               </p>
-              <p className="truncate text-xs text-muted-foreground leading-tight">
+              <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm">
                 {profile.email || "بدون ایمیل"}
+              </p>
+              <p className="mt-1 hidden text-[11px] text-muted-foreground md:block">
+                مدیریت وظایف و پروژه‌ها — همگام با حساب آنلاین
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Link
               to="/notifications"
-              className="relative flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted"
+              className="relative flex size-11 items-center justify-center rounded-2xl border bg-card/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="اعلان‌ها"
             >
               <Bell className="size-5" />
@@ -103,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted"
+                className="flex size-11 items-center justify-center rounded-2xl border bg-card/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="منوی کاربر"
               >
                 <Menu className="size-5" />
@@ -142,9 +148,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-3 pb-24 pt-4 md:px-6 lg:pb-8">
-        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
+        <aside className="sticky top-28 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
           <div className="mb-4 px-2 pt-2">
-            <p className="text-lg font-bold">مدیریت وظایف</p>
+            <p className="text-lg font-bold">وظایف و پروژه‌ها</p>
             <p className="text-xs text-muted-foreground">همگام با حساب آنلاین</p>
           </div>
           <nav className="flex flex-col gap-1">
