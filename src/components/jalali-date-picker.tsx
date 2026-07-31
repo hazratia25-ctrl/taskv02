@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, X } from "lucide-react";
 import {
   JALALI_MONTHS,
   WEEK_DAYS,
@@ -85,15 +85,21 @@ export function JalaliMonthGrid({
 export function JalaliDatePicker({
   value,
   onChange,
+  withTime = true,
 }: {
   value: string | null;
   onChange: (iso: string | null) => void;
+  withTime?: boolean;
 }) {
   const initial = value ? new Date(value) : new Date();
   const j0 = toJalali(initial);
   const [jy, setJy] = useState(j0.jy);
   const [jm, setJm] = useState(j0.jm);
   const [open, setOpen] = useState(false);
+
+  const current = value ? new Date(value) : null;
+  const hh = current ? String(current.getHours()).padStart(2, "0") : "09";
+  const mm = current ? String(current.getMinutes()).padStart(2, "0") : "00";
 
   const move = (delta: number) => {
     let m = jm + delta;
@@ -110,6 +116,13 @@ export function JalaliDatePicker({
     setJy(y);
   };
 
+  const applyTime = (time: string) => {
+    const [h, min] = time.split(":").map((n) => Number(n));
+    const base = current ? new Date(current) : new Date();
+    base.setHours(Number.isFinite(h) ? h : 9, Number.isFinite(min) ? min : 0, 0, 0);
+    onChange(base.toISOString());
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -120,7 +133,7 @@ export function JalaliDatePicker({
             className="flex-1 justify-start gap-2 font-normal"
           >
             <CalendarDays className="size-4" />
-            {value ? formatJalali(value) : "انتخاب مهلت"}
+            {value ? formatJalali(value, withTime) : "انتخاب تاریخ و ساعت"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72" align="start">
@@ -138,12 +151,32 @@ export function JalaliDatePicker({
           <JalaliMonthGrid
             jy={jy}
             jm={jm}
-            selected={value ? new Date(value) : null}
+            selected={current}
             onSelect={(d) => {
-              onChange(d.toISOString());
-              setOpen(false);
+              const next = new Date(d);
+              next.setHours(Number(hh), Number(mm), 0, 0);
+              onChange(next.toISOString());
+              if (!withTime) setOpen(false);
             }}
           />
+          {withTime && (
+            <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="size-4" />
+                ساعت
+              </label>
+              <input
+                type="time"
+                dir="ltr"
+                value={`${hh}:${mm}`}
+                onChange={(e) => applyTime(e.target.value)}
+                className="h-9 rounded-lg border bg-background px-2 text-sm"
+              />
+              <Button type="button" size="sm" onClick={() => setOpen(false)}>
+                تأیید
+              </Button>
+            </div>
+          )}
         </PopoverContent>
       </Popover>
       {value && (
@@ -152,7 +185,7 @@ export function JalaliDatePicker({
           variant="ghost"
           size="icon"
           onClick={() => onChange(null)}
-          aria-label="حذف مهلت"
+          aria-label="حذف تاریخ"
         >
           <X className="size-4" />
         </Button>
@@ -160,3 +193,4 @@ export function JalaliDatePicker({
     </div>
   );
 }
+

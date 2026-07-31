@@ -28,6 +28,9 @@ import {
   type TaskStatus,
 } from "@/lib/types";
 import { JalaliDatePicker } from "./jalali-date-picker";
+import { ProjectFormBody } from "./project-form";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ListChecks, FolderKanban } from "lucide-react";
 import { toast } from "sonner";
 
 const NONE = "__none__";
@@ -55,11 +58,13 @@ export function TaskDialog({
   });
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState("");
+  const [kind, setKind] = useState<"task" | "project">("task");
 
   useEffect(() => {
     if (!open) return;
     setError("");
     setNewTag("");
+    setKind("task");
     setForm(
       task
         ? {
@@ -162,11 +167,39 @@ export function TaskDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader className="text-start">
-          <DialogTitle>{task ? "ویرایش وظیفه" : "وظیفه جدید"}</DialogTitle>
+          <DialogTitle>
+            {task ? "ویرایش وظیفه" : kind === "task" ? "وظیفه جدید" : "پروژه جدید"}
+          </DialogTitle>
           <DialogDescription>
-            اطلاعات وظیفه را کامل کنید. همه‌چیز محلی ذخیره می‌شود.
+            {task
+              ? "اطلاعات وظیفه را کامل کنید."
+              : "نوع مورد را انتخاب کنید؛ برای پروژه، مراحل و اعضای تیم هم قابل تعریف است."}
           </DialogDescription>
         </DialogHeader>
+
+        {!task && (
+          <ToggleGroup
+            type="single"
+            value={kind}
+            onValueChange={(v) => v && setKind(v as "task" | "project")}
+            className="w-full rounded-xl border p-1"
+          >
+            <ToggleGroupItem value="task" className="flex-1 gap-2 text-sm">
+              <ListChecks className="size-4" /> وظیفه
+            </ToggleGroupItem>
+            <ToggleGroupItem value="project" className="flex-1 gap-2 text-sm">
+              <FolderKanban className="size-4" /> پروژه
+            </ToggleGroupItem>
+          </ToggleGroup>
+        )}
+
+        {!task && kind === "project" ? (
+          <ProjectFormBody
+            defaultDueDate={defaultDueDate}
+            onDone={() => onOpenChange(false)}
+          />
+        ) : (
+        <>
 
         <form className="space-y-4" onSubmit={submit}>
           <div className="space-y-2">
@@ -250,7 +283,7 @@ export function TaskDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>مهلت انجام (تقویم شمسی)</Label>
+            <Label>مهلت انجام (تاریخ و ساعت شمسی)</Label>
             <JalaliDatePicker
               value={form.dueDate}
               onChange={(iso) => setForm((f) => ({ ...f, dueDate: iso }))}
@@ -331,6 +364,8 @@ export function TaskDialog({
             </div>
           </DialogFooter>
         </form>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );

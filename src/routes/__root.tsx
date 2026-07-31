@@ -155,7 +155,18 @@ function RootComponent() {
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
           </AppShell>
-          <Toaster position="top-center" richColors />
+          <Toaster
+            position="top-center"
+            richColors
+            closeButton
+            dir="rtl"
+            toastOptions={{
+              classNames: {
+                toast: "rounded-2xl border shadow-lg text-sm font-medium",
+                title: "font-semibold",
+              },
+            }}
+          />
         </StoreProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -14,6 +14,7 @@ import {
   type AppNotification,
   type AppSettings,
   type Category,
+  type Project,
   type Tag,
   type Task,
   type TaskPriority,
@@ -39,6 +40,7 @@ function load(): AppData {
       ...parsed,
       settings: { ...defaultSettings, ...(parsed.settings ?? {}) },
       tasks: parsed.tasks ?? [],
+      projects: parsed.projects ?? [],
       categories: parsed.categories ?? [],
       tags: parsed.tags ?? [],
       notifications: parsed.notifications ?? [],
@@ -59,6 +61,18 @@ export interface TaskInput {
   dueDate: string | null;
 }
 
+export interface ProjectInput {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  categoryId: string | null;
+  tagIds: string[];
+  dueDate: string | null;
+  members: Project["members"];
+  stages: Project["stages"];
+}
+
 interface StoreValue extends AppData {
   ready: boolean;
   createTask: (input: TaskInput) => Task;
@@ -66,6 +80,11 @@ interface StoreValue extends AppData {
   deleteTask: (id: string) => void;
   toggleComplete: (id: string) => void;
   setTaskStatus: (id: string, status: TaskStatus) => void;
+  createProject: (input: ProjectInput) => Project;
+  updateProject: (id: string, patch: Partial<ProjectInput>) => void;
+  deleteProject: (id: string) => void;
+  setProjectStatus: (id: string, status: TaskStatus) => void;
+  toggleStage: (projectId: string, stageId: string) => void;
   createCategory: (name: string, color: string) => void;
   updateCategory: (id: string, patch: Partial<Pick<Category, "name" | "color">>) => void;
   deleteCategory: (id: string) => void;
@@ -169,15 +188,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
 
       const cloudEmpty =
+        snapshot.projects.length === 0 &&
         snapshot.tasks.length === 0 &&
         snapshot.categories.length === 0 &&
         snapshot.tags.length === 0;
       const localHasData =
+        local.projects.length > 0 ||
         local.tasks.length > 0 || local.categories.length > 0 || local.tags.length > 0;
 
       const next: AppData = {
         version: 1,
         tasks: cloudEmpty && localHasData ? local.tasks : snapshot.tasks,
+        projects: cloudEmpty && localHasData ? local.projects : snapshot.projects,
         categories: cloudEmpty && localHasData ? local.categories : snapshot.categories,
         tags: cloudEmpty && localHasData ? local.tags : snapshot.tags,
         notifications: cloudEmpty && localHasData ? local.notifications : snapshot.notifications,
@@ -321,6 +343,67 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               : t,
           ),
         })),
+      createProject: (input) => {
+        const project: Project = {
+          id: uid(),
+          ...input,
+          createdAt: now(),
+          updatedAt: now(),
+          completedAt: input.status === "COMPLETED" ? now() : null,
+        };
+        patch((p) => ({ ...p, projects: [project, ...p.projects] }));
+        return project;
+      },
+      updateProject: (id, p2) =>
+        patch((p) => ({
+          ...p,
+          projects: p.projects.map((pr) =>
+            pr.id === id
+              ? {
+                  ...pr,
+                  ...p2,
+                  updatedAt: now(),
+                  completedAt:
+                    p2.status === "COMPLETED"
+                      ? (pr.completedAt ?? now())
+                      : p2.status
+                        ? null
+                        : pr.completedAt,
+                }
+              : pr,
+          ),
+        })),
+      deleteProject: (id) =>
+        patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) })),
+      setProjectStatus: (id, status) =>
+        patch((p) => ({
+          ...p,
+          projects: p.projects.map((pr) =>
+            pr.id === id
+              ? {
+                  ...pr,
+                  status,
+                  completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
+                  updatedAt: now(),
+                }
+              : pr,
+          ),
+        })),
+      toggleStage: (projectId, stageId) =>
+        patch((p) => ({
+          ...p,
+          projects: p.projects.map((pr) =>
+            pr.id === projectId
+              ? {
+                  ...pr,
+                  updatedAt: now(),
+                  stages: pr.stages.map((st) =>
+                    st.id === stageId ? { ...st, done: !st.done } : st,
+                  ),
+                }
+              : pr,
+          ),
+        })),
       createCategory: (name, color) =>
         patch((p) => ({
           ...p,
@@ -336,6 +419,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ...p,
           categories: p.categories.filter((c) => c.id !== id),
           tasks: p.tasks.map((t) => (t.categoryId === id ? { ...t, categoryId: null } : t)),
+          projects: p.projects.map((pr) =>
+            pr.categoryId === id ? { ...pr, categoryId: null } : pr,
+          ),
         })),
       createTag: (name) =>
         patch((p) =>
@@ -348,6 +434,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ...p,
           tags: p.tags.filter((t) => t.id !== id),
           tasks: p.tasks.map((t) => ({ ...t, tagIds: t.tagIds.filter((x) => x !== id) })),
+          projects: p.projects.map((pr) => ({
+            ...pr,
+            tagIds: pr.tagIds.filter((x) => x !== id),
+          })),
         })),
       markNotificationRead: (id) =>
         patch((p) => ({
@@ -386,6 +476,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setData({
             version: 1,
             tasks: dedupe(tasks),
+            projects: dedupe(parsed.projects as Project[]),
             categories: dedupe(parsed.categories as Category[]),
             tags: dedupe(parsed.tags as Tag[]),
             notifications: dedupe(parsed.notifications as AppNotification[]),
@@ -410,10 +501,17 @@ export function useStore() {
   return ctx;
 }
 
-export function isOverdue(task: Task) {
+export function isOverdue(item: { dueDate: string | null; status: TaskStatus }) {
   return (
-    !!task.dueDate &&
-    task.status !== "COMPLETED" &&
-    daysBetween(new Date(), new Date(task.dueDate)) < 0
+    !!item.dueDate &&
+    item.status !== "COMPLETED" &&
+    daysBetween(new Date(), new Date(item.dueDate)) < 0
   );
+}
+
+export function projectProgress(project: Project) {
+  if (project.status === "COMPLETED") return 100;
+  if (project.stages.length === 0) return project.status === "IN_PROGRESS" ? 25 : 0;
+  const done = project.stages.filter((s) => s.done).length;
+  return Math.round((done / project.stages.length) * 100);
 }
