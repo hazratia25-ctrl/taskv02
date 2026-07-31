@@ -4,11 +4,14 @@ import { PageHeader } from "@/components/app-shell";
 import { TaskDialog } from "@/components/task-dialog";
 import { PriorityBadge } from "@/components/task-item";
 import { Button } from "@/components/ui/button";
-import { isOverdue, useStore } from "@/lib/store";
-import { STATUS_LABELS, type Task, type TaskStatus } from "@/lib/types";
+import { isOverdue, projectProgress, useStore } from "@/lib/store";
+import { STATUS_LABELS, type Project, type Task, type TaskStatus } from "@/lib/types";
 import { fa, formatJalali } from "@/lib/jalali";
 import { cn } from "@/lib/utils";
-import { GripVertical, ArrowLeftRight } from "lucide-react";
+import { GripVertical, ArrowLeftRight, ListChecks, FolderKanban, Users } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Progress } from "@/components/ui/progress";
+import { ProjectDialog } from "@/components/project-dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/kanban")({
@@ -31,7 +34,10 @@ const NEXT: Record<TaskStatus, TaskStatus> = {
 };
 
 function KanbanPage() {
-  const { tasks, setTaskStatus, categories } = useStore();
+  const { tasks, projects, setTaskStatus, setProjectStatus, categories } = useStore();
+  const [scope, setScope] = useState<"tasks" | "projects">("tasks");
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [overColumn, setOverColumn] = useState<TaskStatus | null>(null);
   const [open, setOpen] = useState(false);
@@ -42,6 +48,22 @@ function KanbanPage() {
     tasks.forEach((t) => map[t.status].push(t));
     return map;
   }, [tasks]);
+
+  const groupedProjects = useMemo(() => {
+    const map: Record<TaskStatus, Project[]> = { TODO: [], IN_PROGRESS: [], COMPLETED: [] };
+    projects.forEach((p) => map[p.status].push(p));
+    return map;
+  }, [projects]);
+
+  const dropProject = (status: TaskStatus) => {
+    setOverColumn(null);
+    if (!dragging) return;
+    const project = projects.find((p) => p.id === dragging);
+    setDragging(null);
+    if (!project || project.status === status) return;
+    setProjectStatus(project.id, status);
+    toast.success(`پروژه «${project.title}» به ${STATUS_LABELS[status]} منتقل شد`);
+  };
 
   const drop = (status: TaskStatus) => {
     setOverColumn(null);
@@ -62,6 +84,21 @@ function KanbanPage() {
       <PageHeader
         title="تخته کانبان"
         description="کارت‌ها را بکشید و رها کنید یا با دکمه جابه‌جا کنید"
+        action={
+          <ToggleGroup
+            type="single"
+            value={scope}
+            onValueChange={(v) => v && setScope(v as "tasks" | "projects")}
+            className="rounded-xl border p-1"
+          >
+            <ToggleGroupItem value="tasks" className="gap-2 px-4 text-xs">
+              <ListChecks className="size-4" /> وظایف
+            </ToggleGroupItem>
+            <ToggleGroupItem value="projects" className="gap-2 px-4 text-xs">
+              <FolderKanban className="size-4" /> پروژه‌ها
+            </ToggleGroupItem>
+          </ToggleGroup>
+        }
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -73,7 +110,7 @@ function KanbanPage() {
               setOverColumn(status);
             }}
             onDragLeave={() => setOverColumn((c) => (c === status ? null : c))}
-            onDrop={() => drop(status)}
+            onDrop={() => (scope === "tasks" ? drop(status) : dropProject(status))}
             className={cn(
               "rounded-2xl border bg-sidebar p-3 transition-colors",
               overColumn === status && "border-primary bg-primary/5",
@@ -82,17 +119,84 @@ function KanbanPage() {
             <div className="mb-3 flex items-center justify-between px-1">
               <h2 className="font-semibold">{STATUS_LABELS[status]}</h2>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {fa(grouped[status].length)}
+                {fa(scope === "tasks" ? grouped[status].length : groupedProjects[status].length)}
               </span>
             </div>
 
             <div className="flex min-h-24 flex-col gap-3">
-              {grouped[status].length === 0 && (
+              {scope === "projects" &&
+                groupedProjects[status].map((project) => (
+                  <article
+                    key={project.id}
+                    draggable
+                    onDragStart={() => setDragging(project.id)}
+                    onDragEnd={() => setDragging(null)}
+                    className={cn(
+                      "surface cursor-grab space-y-2 p-3 active:cursor-grabbing",
+                      dragging === project.id && "opacity-50",
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-start text-sm font-semibold hover:underline"
+                        onClick={() => {
+                          setEditingProject(project);
+                          setProjectOpen(true);
+                        }}
+                      >
+                        {project.title}
+                      </button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="انتقال به ستون بعدی"
+                        onClick={() => setProjectStatus(project.id, NEXT[project.status])}
+                      >
+                        <ArrowLeftRight className="size-4" />
+                      </Button>
+                    </div>
+                    <Progress value={projectProgress(project)} />
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <PriorityBadge priority={project.priority} />
+                      <span>
+                        مراحل: {fa((project.stages ?? []).filter((st) => st.done).length)} از{" "}
+                        {fa((project.stages ?? []).length)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="size-3.5" /> {fa((project.members ?? []).length)}
+                      </span>
+                    </div>
+                    {(project.members ?? []).length > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {(project.members ?? [])
+                          .map((m) => `${m.name} | ${m.role}`)
+                          .slice(0, 3)
+                          .join("، ")}
+                      </p>
+                    )}
+                    {project.dueDate && (
+                      <p
+                        className={cn(
+                          "text-xs",
+                          isOverdue(project) ? "text-destructive" : "text-muted-foreground",
+                        )}
+                      >
+                        مهلت: {formatJalali(project.dueDate, true)}
+                      </p>
+                    )}
+                  </article>
+                ))}
+
+              {(scope === "tasks" ? grouped[status].length : groupedProjects[status].length) ===
+                0 && (
                 <p className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">
                   کارتی در این ستون نیست
                 </p>
               )}
-              {grouped[status].map((task) => {
+              {scope === "tasks" &&
+                grouped[status].map((task) => {
                 const category = categories.find((c) => c.id === task.categoryId);
                 return (
                   <article
@@ -159,6 +263,7 @@ function KanbanPage() {
       </div>
 
       <TaskDialog open={open} onOpenChange={setOpen} task={editing} />
+      <ProjectDialog open={projectOpen} onOpenChange={setProjectOpen} project={editingProject} />
     </div>
   );
 }
