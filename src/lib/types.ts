@@ -40,6 +40,35 @@ export interface AppNotification {
   createdAt: string;
 }
 
+export interface ProjectMember {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface ProjectStage {
+  id: string;
+  title: string;
+  done: boolean;
+  dueDate: string | null;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  categoryId: string | null;
+  tagIds: string[];
+  dueDate: string | null;
+  members: ProjectMember[];
+  stages: ProjectStage[];
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+
 export interface UserProfile {
   name: string;
   role: string;
@@ -60,12 +89,14 @@ export interface AppSettings {
 export interface AppData {
   version: number;
   tasks: Task[];
+  projects: Project[];
   categories: Category[];
   tags: Tag[];
   notifications: AppNotification[];
   profile: UserProfile | null;
   settings: AppSettings;
 }
+
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "انجام‌نشده",
@@ -89,9 +120,11 @@ export const defaultSettings: AppSettings = {
 export const emptyData: AppData = {
   version: 1,
   tasks: [],
+  projects: [],
   categories: [],
   tags: [],
   notifications: [],
   profile: null,
   settings: defaultSettings,
 };
+
