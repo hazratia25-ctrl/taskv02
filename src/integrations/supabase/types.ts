@@ -104,6 +104,57 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          members: Json
+          priority: string
+          stages: Json
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id: string
+          members?: Json
+          priority?: string
+          stages?: Json
+          status?: string
+          tag_ids?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          members?: Json
+          priority?: string
+          stages?: Json
+          status?: string
+          tag_ids?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
