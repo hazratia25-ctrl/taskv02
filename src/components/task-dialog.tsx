@@ -194,177 +194,177 @@ export function TaskDialog({
         )}
 
         {!task && kind === "project" ? (
-          <ProjectFormBody
-            defaultDueDate={defaultDueDate}
-            onDone={() => onOpenChange(false)}
-          />
+          <ProjectFormBody defaultDueDate={defaultDueDate} onDone={() => onOpenChange(false)} />
         ) : (
-        <>
+          <>
+            <form className="space-y-4" onSubmit={submit}>
+              <div className="space-y-2">
+                <Label htmlFor="title">عنوان</Label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="چه کاری باید انجام شود؟"
+                />
+              </div>
 
-        <form className="space-y-4" onSubmit={submit}>
-          <div className="space-y-2">
-            <Label htmlFor="title">عنوان</Label>
-            <Input
-              id="title"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="چه کاری باید انجام شود؟"
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="desc">توضیحات</Label>
+                <Textarea
+                  id="desc"
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="جزئیات بیشتر…"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="desc">توضیحات</Label>
-            <Textarea
-              id="desc"
-              rows={3}
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="جزئیات بیشتر…"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>وضعیت</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) => setForm((f) => ({ ...f, status: v as TaskStatus }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>اولویت</Label>
-              <Select
-                value={form.priority}
-                onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TaskPriority }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>دسته‌بندی</Label>
-            <Select
-              value={form.categoryId ?? NONE}
-              onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v === NONE ? null : v }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="بدون دسته‌بندی" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>بدون دسته‌بندی</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>مهلت انجام (تاریخ و ساعت شمسی)</Label>
-            <JalaliDatePicker
-              value={form.dueDate}
-              onChange={(iso) => setForm((f) => ({ ...f, dueDate: iso }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>برچسب‌ها</Label>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t) => {
-                const active = form.tagIds.includes(t.id);
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        tagIds: active ? f.tagIds.filter((x) => x !== t.id) : [...f.tagIds, t.id],
-                      }))
-                    }
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>وضعیت</Label>
+                  <Select
+                    value={form.status}
+                    onValueChange={(v) => setForm((f) => ({ ...f, status: v as TaskStatus }))}
                   >
-                    <Badge variant={active ? "default" : "outline"}>{t.name}</Badge>
-                  </button>
-                );
-              })}
-              {tags.length === 0 && (
-                <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="برچسب جدید"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTag();
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>اولویت</Label>
+                  <Select
+                    value={form.priority}
+                    onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TaskPriority }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>دسته‌بندی</Label>
+                <Select
+                  value={form.categoryId ?? NONE}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, categoryId: v === NONE ? null : v }))
                   }
-                }}
-              />
-              <Button type="button" variant="secondary" onClick={addTag}>
-                افزودن
-              </Button>
-            </div>
-            {form.tagIds.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                انتخاب‌شده:{" "}
-                {form.tagIds
-                  .map((id) => tagMap.get(id)?.name)
-                  .filter(Boolean)
-                  .join("، ")}
-              </p>
-            )}
-          </div>
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="بدون دسته‌بندی" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>بدون دسته‌بندی</SelectItem>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="space-y-2">
+                <Label>مهلت انجام (تاریخ و ساعت شمسی)</Label>
+                <JalaliDatePicker
+                  value={form.dueDate}
+                  onChange={(iso) => setForm((f) => ({ ...f, dueDate: iso }))}
+                />
+              </div>
 
-          <DialogFooter className="gap-2 sm:justify-start">
-            <Button type="submit">{task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
-            <div className="flex flex-1 gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-1/2"
-                onClick={() => onOpenChange(false)}
-              >
-                انصراف
-              </Button>
-              <Button
-                type="button"
-                className="w-1/2 bg-orange-500 text-white hover:bg-orange-600"
-                onClick={resetForm}
-              >
-                پاک کردن فرم
-              </Button>
-            </div>
-          </DialogFooter>
-        </form>
-        </>
+              <div className="space-y-2">
+                <Label>برچسب‌ها</Label>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((t) => {
+                    const active = form.tagIds.includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            tagIds: active
+                              ? f.tagIds.filter((x) => x !== t.id)
+                              : [...f.tagIds, t.id],
+                          }))
+                        }
+                      >
+                        <Badge variant={active ? "default" : "outline"}>{t.name}</Badge>
+                      </button>
+                    );
+                  })}
+                  {tags.length === 0 && (
+                    <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    placeholder="برچسب جدید"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTag();
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="secondary" onClick={addTag}>
+                    افزودن
+                  </Button>
+                </div>
+                {form.tagIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    انتخاب‌شده:{" "}
+                    {form.tagIds
+                      .map((id) => tagMap.get(id)?.name)
+                      .filter(Boolean)
+                      .join("، ")}
+                  </p>
+                )}
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+
+              <DialogFooter className="gap-2 sm:justify-start">
+                <Button type="submit">{task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
+                <div className="flex flex-1 gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-1/2"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    انصراف
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-1/2 bg-orange-500 text-white hover:bg-orange-600"
+                    onClick={resetForm}
+                  >
+                    پاک کردن فرم
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </>
         )}
       </DialogContent>
     </Dialog>

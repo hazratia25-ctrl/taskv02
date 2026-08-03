@@ -97,7 +97,6 @@ export interface AppData {
   settings: AppSettings;
 }
 
-
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "انجام‌نشده",
   IN_PROGRESS: "در حال انجام",
@@ -127,4 +126,3 @@ export const emptyData: AppData = {
   profile: null,
   settings: defaultSettings,
 };
-

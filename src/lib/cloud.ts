@@ -257,4 +257,3 @@ async function deleteMissing(table: SyncTable, userId: string, ids: string[]) {
   }
   await q;
 }
-

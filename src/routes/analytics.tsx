@@ -173,7 +173,6 @@ function renderTrend(type: ChartType, rows: TrendRow[]) {
   );
 }
 
-
 type Scope = "tasks" | "projects";
 
 function StatGrid({ items }: { items: { label: string; value: string }[] }) {
@@ -208,8 +207,11 @@ function monthBuckets<T extends { createdAt: string; completedAt: string | null 
     };
     months.push({
       name: `${JALALI_MONTHS[jm - 1]} ${fa(jy)}`,
-      "\u0627\u06cc\u062c\u0627\u062f\u0634\u062f\u0647": items.filter((t) => inMonth(t.createdAt)).length,
-      "\u062a\u06a9\u0645\u06cc\u0644\u200c\u0634\u062f\u0647": items.filter((t) => inMonth(t.completedAt)).length,
+      "\u0627\u06cc\u062c\u0627\u062f\u0634\u062f\u0647": items.filter((t) => inMonth(t.createdAt))
+        .length,
+      "\u062a\u06a9\u0645\u06cc\u0644\u200c\u0634\u062f\u0647": items.filter((t) =>
+        inMonth(t.completedAt),
+      ).length,
     });
   }
   return months;
@@ -312,7 +314,9 @@ function AnalyticsPage() {
         {
           heading: "خلاصه وضعیت",
           html: `<div class="stats">${statCards
-            .map((s) => `<div class="stat"><b>${esc(s.value)}</b><span>${esc(s.label)}</span></div>`)
+            .map(
+              (s) => `<div class="stat"><b>${esc(s.value)}</b><span>${esc(s.label)}</span></div>`,
+            )
             .join("")}</div>`,
         },
         {
@@ -348,7 +352,9 @@ function AnalyticsPage() {
           heading: "پروژه‌ها، مراحل و اعضا",
           html: projects
             .map(
-              (pr) => `<div style="border:1px solid #d8e0ea;border-radius:10px;padding:8px;margin-bottom:8px">
+              (
+                pr,
+              ) => `<div style="border:1px solid #d8e0ea;border-radius:10px;padding:8px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600">
                 <span>${esc(pr.title)}</span>
                 <span>${STATUS_LABELS[pr.status]} — ${fa(projectProgress(pr))}٪</span>
@@ -362,7 +368,9 @@ function AnalyticsPage() {
                   (st, i) =>
                     `<li>مرحله ${fa(i + 1)}: ${esc(st.title)} — ${st.done ? "تکمیل‌شده" : "در انتظار"}</li>`,
                 )
-                .join("")}${(pr.stages ?? []).length === 0 ? "<li>مرحله‌ای ثبت نشده است.</li>" : ""}</ul>
+                .join(
+                  "",
+                )}${(pr.stages ?? []).length === 0 ? "<li>مرحله‌ای ثبت نشده است.</li>" : ""}</ul>
               <p style="font-size:10px;color:#64748b;margin:6px 0 0">اعضا: ${
                 (pr.members ?? []).length
                   ? (pr.members ?? []).map((m) => `${esc(m.name)} (${esc(m.role)})`).join(" ، ")
@@ -386,7 +394,6 @@ function AnalyticsPage() {
       setExporting(false);
     }
   };
-
 
   const scopePicker = (
     <ToggleGroup
@@ -422,9 +429,7 @@ function AnalyticsPage() {
       {items.length === 0 ? (
         <EmptyState
           title={scope === "tasks" ? "داده‌ای برای تحلیل وظایف نیست" : "پروژه‌ای برای تحلیل نیست"}
-          description={
-            scope === "tasks" ? "ابتدا چند وظیفه ایجاد کنید." : "ابتدا یک پروژه بسازید."
-          }
+          description={scope === "tasks" ? "ابتدا چند وظیفه ایجاد کنید." : "ابتدا یک پروژه بسازید."}
         />
       ) : (
         <div className="space-y-5 bg-background p-1">

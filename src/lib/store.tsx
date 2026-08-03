@@ -57,7 +57,6 @@ function load(key: string): AppData {
   }
 }
 
-
 export interface TaskInput {
   title: string;
   description: string;
@@ -243,7 +242,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       /* quota errors ignored */
     }
   }, [data, storageKey]);
-
 
   // debounced write-through sync to the cloud
   useEffect(() => {

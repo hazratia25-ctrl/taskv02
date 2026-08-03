@@ -101,7 +101,10 @@ export function ProjectFormBody({
   const addStage = () => {
     const title = stageTitle.trim();
     if (!title) return;
-    setForm((f) => ({ ...f, stages: [...f.stages, { id: uid(), title, done: false, dueDate: null }] }));
+    setForm((f) => ({
+      ...f,
+      stages: [...f.stages, { id: uid(), title, done: false, dueDate: null }],
+    }));
     setStageTitle("");
   };
 
@@ -247,7 +250,9 @@ export function ProjectFormBody({
               </button>
             );
           })}
-          {tags.length === 0 && <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>}
+          {tags.length === 0 && (
+            <p className="text-xs text-muted-foreground">هنوز برچسبی ندارید.</p>
+          )}
         </div>
         <div className="flex gap-2">
           <Input
