@@ -196,7 +196,7 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     ["notifications", notifications],
   ];
 
-  const jobs: Promise<unknown>[] = [];
+  const jobs: PromiseLike<unknown>[] = [];
 
   for (const [table, rows] of batches) {
     const changed = rows.filter((row) => {
@@ -206,7 +206,7 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
       rowCache.set(key, json);
       return true;
     });
-    if (changed.length) jobs.push(supabase.from(table).upsert(changed));
+    if (changed.length) jobs.push(supabase.from(table).upsert(changed as never));
 
     const idsKey = rows.map((r) => r.id).join("|");
     if (idCache.get(table) !== idsKey) {
@@ -236,7 +236,9 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     profileCache = profileJson;
     jobs.push(
       data.profile
-        ? supabase.from("profiles").upsert({ ...profileRow, updated_at: new Date().toISOString() })
+        ? supabase
+            .from("profiles")
+            .upsert({ ...profileRow, updated_at: new Date().toISOString() } as never)
         : supabase
             .from("profiles")
             .update({ settings: data.settings as unknown as Json })
