@@ -163,15 +163,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const hydrated = useRef(false);
   const syncUserId = useRef<string | null>(null);
 
-  // load: cloud when signed in, local cache otherwise
+  const storageKey = storageKeyFor(user?.id ?? null);
+
+  // load: cloud when signed in, local cache otherwise (cache is per account)
   useEffect(() => {
     if (authLoading) return;
     let cancelled = false;
+    const key = storageKeyFor(user?.id ?? null);
 
     if (!user) {
       syncUserId.current = null;
-      const loaded = load();
-      setData(loaded);
+      setData(load(key));
       hydrated.current = true;
       setReady(true);
       return;
@@ -180,7 +182,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setReady(false);
     hydrated.current = false;
     (async () => {
-      const local = load();
+      let local = load(key);
+      // one-time adoption of the pre-account cache for the first signed-in user
+      if (local.tasks.length === 0 && local.projects.length === 0) {
+        const guest = load(storageKeyFor(null));
+        if (guest.tasks.length > 0 || guest.projects.length > 0) local = guest;
+      }
       let snapshot;
       try {
         snapshot = await fetchCloud(user.id);
@@ -201,15 +208,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         snapshot.tags.length === 0;
       const localHasData =
         local.projects.length > 0 ||
-        local.tasks.length > 0 || local.categories.length > 0 || local.tags.length > 0;
+        local.tasks.length > 0 ||
+        local.categories.length > 0 ||
+        local.tags.length > 0;
+      const useLocal = cloudEmpty && localHasData;
 
       const next: AppData = {
         version: 1,
-        tasks: cloudEmpty && localHasData ? local.tasks : snapshot.tasks,
-        projects: cloudEmpty && localHasData ? local.projects : snapshot.projects,
-        categories: cloudEmpty && localHasData ? local.categories : snapshot.categories,
-        tags: cloudEmpty && localHasData ? local.tags : snapshot.tags,
-        notifications: cloudEmpty && localHasData ? local.notifications : snapshot.notifications,
+        tasks: useLocal ? local.tasks : snapshot.tasks,
+        projects: useLocal ? local.projects : snapshot.projects,
+        categories: useLocal ? local.categories : snapshot.categories,
+        tags: useLocal ? local.tags : snapshot.tags,
+        notifications: useLocal ? local.notifications : snapshot.notifications,
         profile: snapshot.profile ?? local.profile,
         settings: snapshot.settings,
       };
@@ -228,11 +238,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated.current) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      window.localStorage.setItem(storageKey, JSON.stringify(data));
     } catch {
       /* quota errors ignored */
     }
-  }, [data]);
+  }, [data, storageKey]);
+
 
   // debounced write-through sync to the cloud
   useEffect(() => {
