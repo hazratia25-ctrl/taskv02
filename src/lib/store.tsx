@@ -25,14 +25,20 @@ import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
 import { fetchCloud, pushCloud } from "./cloud";
 
-const STORAGE_KEY = "task-manager-offline-v1";
+const STORAGE_PREFIX = "task-manager-offline-v1";
+const LEGACY_KEY = "task-manager-offline-v1";
+
+/** Each account keeps its own local cache so data never leaks between users. */
+const storageKeyFor = (userId: string | null) => `${STORAGE_PREFIX}::${userId ?? "guest"}`;
 
 export const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
-function load(): AppData {
+function load(key: string): AppData {
   if (typeof window === "undefined") return emptyData;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    // drop the old shared cache (it was visible to every account on this device)
+    if (window.localStorage.getItem(LEGACY_KEY)) window.localStorage.removeItem(LEGACY_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return emptyData;
     const parsed = JSON.parse(raw) as Partial<AppData>;
     return {
@@ -50,6 +56,7 @@ function load(): AppData {
     return emptyData;
   }
 }
+
 
 export interface TaskInput {
   title: string;
