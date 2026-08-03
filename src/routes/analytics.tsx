@@ -214,13 +214,18 @@ function monthBuckets<T extends { createdAt: string; completedAt: string | null 
   return months;
 }
 
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 function AnalyticsPage() {
   const { tasks, projects } = useStore();
   const [scope, setScope] = useState<Scope>("tasks");
   const [statusType, setStatusType] = useState<ChartType>("pie");
   const [priorityType, setPriorityType] = useState<ChartType>("bar");
   const [trendType, setTrendType] = useState<ChartType>("bar");
-  const reportRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const priorityRef = useRef<HTMLDivElement>(null);
+  const trendRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
   const items = scope === "tasks" ? tasks : projects;
@@ -263,26 +268,124 @@ function AnalyticsPage() {
     };
   }, [items, projects]);
 
-  const exportImage = async () => {
-    if (!reportRef.current) return;
+  const statCards =
+    scope === "tasks"
+      ? [
+          { label: "کل وظایف", value: fa(data.total) },
+          { label: "در حال انجام", value: fa(data.inProgress) },
+          { label: "انجام‌شده", value: fa(data.completed) },
+          { label: "اولویت بالا", value: fa(data.high) },
+          { label: "عقب‌افتاده", value: fa(data.overdue) },
+          { label: "نرخ تکمیل", value: `${fa(data.rate)}٪` },
+        ]
+      : [
+          { label: "کل پروژه‌ها", value: fa(data.total) },
+          { label: "در حال انجام", value: fa(data.inProgress) },
+          { label: "تکمیل‌شده", value: fa(data.completed) },
+          { label: "اولویت بالا", value: fa(data.high) },
+          { label: "عقب‌افتاده", value: fa(data.overdue) },
+          { label: "اعضای تیم", value: fa(data.members) },
+        ];
+
+  const exportPdf = async () => {
     setExporting(true);
     try {
-      const dataUrl = await toPng(reportRef.current, {
-        pixelRatio: 2,
-        skipFonts: true,
-        backgroundColor: getComputedStyle(document.body).backgroundColor || "#ffffff",
+      const shot = async (el: HTMLElement | null) => {
+        if (!el) return "";
+        try {
+          return await toPng(el, { pixelRatio: 2, skipFonts: true, backgroundColor: "#ffffff" });
+        } catch {
+          return "";
+        }
+      };
+      const [statusImg, priorityImg, trendImg] = await Promise.all([
+        shot(statusRef.current),
+        shot(priorityRef.current),
+        shot(trendRef.current),
+      ]);
+
+      const chartBox = (heading: string, src: string) =>
+        src ? `<div class="chart"><h3>${esc(heading)}</h3><img src="${src}" /></div>` : "";
+
+      const sections = [
+        {
+          heading: "خلاصه وضعیت",
+          html: `<div class="stats">${statCards
+            .map((s) => `<div class="stat"><b>${esc(s.value)}</b><span>${esc(s.label)}</span></div>`)
+            .join("")}</div>`,
+        },
+        {
+          heading: scope === "tasks" ? "پیشرفت کلی وظایف" : "میانگین پیشرفت پروژه‌ها",
+          html: `<div class="bar"><i style="width:${scope === "tasks" ? data.rate : data.avgProgress}%"></i></div>
+            <p style="font-size:11px;color:#64748b;margin:6px 0 0">${fa(
+              scope === "tasks" ? data.rate : data.avgProgress,
+            )}٪</p>`,
+        },
+        {
+          heading: "نمودارها",
+          html: `<div class="charts">${chartBox("توزیع وضعیت", statusImg)}${chartBox(
+            scope === "tasks" ? "توزیع اولویت" : "وضعیت مراحل پروژه‌ها",
+            priorityImg,
+          )}${chartBox("روند ۳ ماه اخیر", trendImg)}</div>`,
+        },
+      ];
+
+      if (scope === "tasks") {
+        sections.push({
+          heading: "فهرست وظایف",
+          html: `<table><thead><tr><th>عنوان</th><th>وضعیت</th><th>اولویت</th><th>مهلت</th></tr></thead><tbody>${tasks
+            .map(
+              (t) =>
+                `<tr><td>${esc(t.title)}</td><td>${STATUS_LABELS[t.status]}</td><td>${
+                  PRIORITY_LABELS[t.priority]
+                }</td><td>${t.dueDate ? esc(formatJalali(t.dueDate)) : "—"}</td></tr>`,
+            )
+            .join("")}</tbody></table>`,
+        });
+      } else {
+        sections.push({
+          heading: "پروژه‌ها، مراحل و اعضا",
+          html: projects
+            .map(
+              (pr) => `<div style="border:1px solid #d8e0ea;border-radius:10px;padding:8px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600">
+                <span>${esc(pr.title)}</span>
+                <span>${STATUS_LABELS[pr.status]} — ${fa(projectProgress(pr))}٪</span>
+              </div>
+              <div class="bar" style="margin:6px 0"><i style="width:${projectProgress(pr)}%"></i></div>
+              <p style="font-size:10px;color:#64748b;margin:0">مهلت: ${
+                pr.dueDate ? esc(formatJalali(pr.dueDate)) : "—"
+              }</p>
+              <ul>${(pr.stages ?? [])
+                .map(
+                  (st, i) =>
+                    `<li>مرحله ${fa(i + 1)}: ${esc(st.title)} — ${st.done ? "تکمیل‌شده" : "در انتظار"}</li>`,
+                )
+                .join("")}${(pr.stages ?? []).length === 0 ? "<li>مرحله‌ای ثبت نشده است.</li>" : ""}</ul>
+              <p style="font-size:10px;color:#64748b;margin:6px 0 0">اعضا: ${
+                (pr.members ?? []).length
+                  ? (pr.members ?? []).map((m) => `${esc(m.name)} (${esc(m.role)})`).join(" ، ")
+                  : "—"
+              }</p>
+            </div>`,
+            )
+            .join(""),
+        });
+      }
+
+      printReportPdf({
+        title: scope === "tasks" ? "گزارش وظایف" : "گزارش پروژه‌ها",
+        subtitle: `تاریخ گزارش: ${formatJalali(new Date().toISOString())}`,
+        sections,
       });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `gozaresh-${scope}-${new Date().toISOString().slice(0, 10)}.png`;
-      a.click();
-      toast.success("تصویر گزارش ذخیره شد");
+      toast.success("گزارش PDF آماده شد؛ در پنجره چاپ گزینه ذخیره PDF را انتخاب کنید.");
     } catch {
-      toast.error("تهیه تصویر گزارش ناموفق بود");
+      toast.error("تهیه گزارش PDF ناموفق بود");
     } finally {
       setExporting(false);
     }
   };
+
 
   const scopePicker = (
     <ToggleGroup
