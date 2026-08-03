@@ -111,9 +111,30 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
   };
 }
 
-/** Full write-through sync: upsert everything, remove rows deleted locally. */
+type SyncTable = "tasks" | "projects" | "categories" | "tags" | "notifications";
+type Row = { id: string } & Record<string, unknown>;
+
+/** Cache of the last synced row shapes so we only send what actually changed. */
+let cacheUserId: string | null = null;
+const rowCache = new Map<string, string>();
+const idCache = new Map<SyncTable, string>();
+let profileCache = "";
+
+export function resetSyncCache() {
+  cacheUserId = null;
+  rowCache.clear();
+  idCache.clear();
+  profileCache = "";
+}
+
+/** Incremental write-through sync: upsert changed rows, remove rows deleted locally. */
 export async function pushCloud(userId: string, data: AppData): Promise<void> {
-  const tasks = data.tasks.map((t) => ({
+  if (cacheUserId !== userId) {
+    resetSyncCache();
+    cacheUserId = userId;
+  }
+
+  const tasks: Row[] = data.tasks.map((t) => ({
     user_id: userId,
     id: t.id,
     title: t.title,
@@ -127,7 +148,7 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     updated_at: t.updatedAt,
     completed_at: t.completedAt,
   }));
-  const projects = data.projects.map((p) => ({
+  const projects: Row[] = data.projects.map((p) => ({
     user_id: userId,
     id: p.id,
     title: p.title,
@@ -143,20 +164,20 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     updated_at: p.updatedAt,
     completed_at: p.completedAt,
   }));
-  const categories = data.categories.map((c) => ({
+  const categories: Row[] = data.categories.map((c) => ({
     user_id: userId,
     id: c.id,
     name: c.name,
     color: c.color,
     created_at: c.createdAt,
   }));
-  const tags = data.tags.map((t) => ({
+  const tags: Row[] = data.tags.map((t) => ({
     user_id: userId,
     id: t.id,
     name: t.name,
     created_at: t.createdAt,
   }));
-  const notifications = data.notifications.slice(0, 200).map((n) => ({
+  const notifications: Row[] = data.notifications.slice(0, 200).map((n) => ({
     user_id: userId,
     id: n.id,
     task_id: n.taskId,
@@ -167,39 +188,64 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     created_at: n.createdAt,
   }));
 
-  if (tasks.length) await supabase.from("tasks").upsert(tasks);
-  if (projects.length) await supabase.from("projects").upsert(projects);
-  if (categories.length) await supabase.from("categories").upsert(categories);
-  if (tags.length) await supabase.from("tags").upsert(tags);
-  if (notifications.length) await supabase.from("notifications").upsert(notifications);
+  const batches: [SyncTable, Row[]][] = [
+    ["tasks", tasks],
+    ["projects", projects],
+    ["categories", categories],
+    ["tags", tags],
+    ["notifications", notifications],
+  ];
 
-  await Promise.all([
-    deleteMissing("tasks", userId, data.tasks.map((t) => t.id)),
-    deleteMissing("projects", userId, data.projects.map((p) => p.id)),
-    deleteMissing("categories", userId, data.categories.map((c) => c.id)),
-    deleteMissing("tags", userId, data.tags.map((t) => t.id)),
-    deleteMissing("notifications", userId, notifications.map((n) => n.id)),
-  ]);
+  const jobs: Promise<unknown>[] = [];
 
-  if (data.profile) {
-    await supabase.from("profiles").upsert({
-      id: userId,
-      name: data.profile.name,
-      role: data.profile.role ?? "",
-      email: data.profile.email ?? "",
-      avatar: data.profile.avatar,
-      settings: data.settings as unknown as Json,
-      updated_at: new Date().toISOString(),
+  for (const [table, rows] of batches) {
+    const changed = rows.filter((row) => {
+      const key = `${table}:${row.id}`;
+      const json = JSON.stringify(row);
+      if (rowCache.get(key) === json) return false;
+      rowCache.set(key, json);
+      return true;
     });
-  } else {
-    await supabase
-      .from("profiles")
-      .update({ settings: data.settings as unknown as Json })
-      .eq("id", userId);
-  }
-}
+    if (changed.length) jobs.push(supabase.from(table).upsert(changed));
 
-type SyncTable = "tasks" | "projects" | "categories" | "tags" | "notifications";
+    const idsKey = rows.map((r) => r.id).join("|");
+    if (idCache.get(table) !== idsKey) {
+      idCache.set(table, idsKey);
+      jobs.push(
+        deleteMissing(
+          table,
+          userId,
+          rows.map((r) => r.id),
+        ),
+      );
+    }
+  }
+
+  const profileRow = data.profile
+    ? {
+        id: userId,
+        name: data.profile.name,
+        role: data.profile.role ?? "",
+        email: data.profile.email ?? "",
+        avatar: data.profile.avatar,
+        settings: data.settings as unknown as Json,
+      }
+    : { id: userId, settings: data.settings as unknown as Json };
+  const profileJson = JSON.stringify(profileRow);
+  if (profileJson !== profileCache) {
+    profileCache = profileJson;
+    jobs.push(
+      data.profile
+        ? supabase.from("profiles").upsert({ ...profileRow, updated_at: new Date().toISOString() })
+        : supabase
+            .from("profiles")
+            .update({ settings: data.settings as unknown as Json })
+            .eq("id", userId),
+    );
+  }
+
+  await Promise.all(jobs);
+}
 
 async function deleteMissing(table: SyncTable, userId: string, ids: string[]) {
   let q = supabase.from(table).delete().eq("user_id", userId);
@@ -209,3 +255,4 @@ async function deleteMissing(table: SyncTable, userId: string, ids: string[]) {
   }
   await q;
 }
+
