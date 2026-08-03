@@ -197,66 +197,66 @@ function KanbanPage() {
               )}
               {scope === "tasks" &&
                 grouped[status].map((task) => {
-                const category = categories.find((c) => c.id === task.categoryId);
-                return (
-                  <article
-                    key={task.id}
-                    draggable
-                    onDragStart={() => setDragging(task.id)}
-                    onDragEnd={() => setDragging(null)}
-                    className={cn(
-                      "surface cursor-grab p-3 active:cursor-grabbing",
-                      dragging === task.id && "opacity-50",
-                    )}
-                  >
-                    <div className="flex items-start gap-2">
-                      <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <button
-                          type="button"
-                          className="text-start text-sm font-semibold hover:underline"
-                          onClick={() => {
-                            setEditing(task);
-                            setOpen(true);
-                          }}
-                        >
-                          {task.title}
-                        </button>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <PriorityBadge priority={task.priority} />
-                          {category && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <span
-                                className="size-2 rounded-full"
-                                style={{ backgroundColor: category.color }}
-                              />
-                              {category.name}
-                            </span>
+                  const category = categories.find((c) => c.id === task.categoryId);
+                  return (
+                    <article
+                      key={task.id}
+                      draggable
+                      onDragStart={() => setDragging(task.id)}
+                      onDragEnd={() => setDragging(null)}
+                      className={cn(
+                        "surface cursor-grab p-3 active:cursor-grabbing",
+                        dragging === task.id && "opacity-50",
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <button
+                            type="button"
+                            className="text-start text-sm font-semibold hover:underline"
+                            onClick={() => {
+                              setEditing(task);
+                              setOpen(true);
+                            }}
+                          >
+                            {task.title}
+                          </button>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <PriorityBadge priority={task.priority} />
+                            {category && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <span
+                                  className="size-2 rounded-full"
+                                  style={{ backgroundColor: category.color }}
+                                />
+                                {category.name}
+                              </span>
+                            )}
+                          </div>
+                          {task.dueDate && (
+                            <p
+                              className={cn(
+                                "mt-2 text-xs",
+                                isOverdue(task) ? "text-destructive" : "text-muted-foreground",
+                              )}
+                            >
+                              مهلت: {formatJalali(task.dueDate)}
+                            </p>
                           )}
                         </div>
-                        {task.dueDate && (
-                          <p
-                            className={cn(
-                              "mt-2 text-xs",
-                              isOverdue(task) ? "text-destructive" : "text-muted-foreground",
-                            )}
-                          >
-                            مهلت: {formatJalali(task.dueDate)}
-                          </p>
-                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="انتقال به ستون بعدی"
+                          onClick={() => setTaskStatus(task.id, NEXT[task.status])}
+                        >
+                          <ArrowLeftRight className="size-4" />
+                        </Button>
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="انتقال به ستون بعدی"
-                        onClick={() => setTaskStatus(task.id, NEXT[task.status])}
-                      >
-                        <ArrowLeftRight className="size-4" />
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
+                    </article>
+                  );
+                })}
             </div>
           </section>
         ))}

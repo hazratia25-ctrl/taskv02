@@ -43,7 +43,6 @@ const NAV = [
 const MOBILE_NAV = NAV.slice(0, 5);
 const MENU_NAV = NAV.slice(5);
 
-
 function Loading() {
   return (
     <div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -70,7 +69,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (authLoading || !user) return <Loading />;
   if (!ready) return <Loading />;
   if (!profile || !profile.name) return <ProfileGate />;
-
 
   return (
     <div className="min-h-screen bg-background">

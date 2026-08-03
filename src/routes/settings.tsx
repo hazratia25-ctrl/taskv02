@@ -150,7 +150,6 @@ function SettingsPage() {
         <PushSettings />
       </section>
 
-
       <section className="surface space-y-4 p-5">
         <h2 className="font-semibold">دسته‌بندی‌ها</h2>
         <div className="flex flex-wrap items-end gap-2">

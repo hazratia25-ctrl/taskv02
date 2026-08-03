@@ -122,7 +122,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
-
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -152,7 +151,7 @@ function RootComponent() {
       <AuthProvider>
         <StoreProvider>
           <AppShell>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
           </AppShell>
           <Toaster
