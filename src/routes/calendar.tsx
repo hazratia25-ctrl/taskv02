@@ -54,16 +54,22 @@ function CalendarPage() {
     setJy(y);
   };
 
-  const tasksForDay = (d: Date) =>
-    tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), d));
-  const projectsForDay = (d: Date) =>
-    projects.filter(
-      (p) =>
-        (p.dueDate && isSameDay(new Date(p.dueDate), d)) ||
-        (p.stages ?? []).some((st) => st.dueDate && isSameDay(new Date(st.dueDate), d)),
-    );
-  const dayTasks = useMemo(() => tasksForDay(selected), [tasks, selected]);
-  const dayProjects = useMemo(() => projectsForDay(selected), [projects, selected]);
+  const tasksForDay = useCallback(
+    (d: Date) => tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), d)),
+    [tasks],
+  );
+  const projectsForDay = useCallback(
+    (d: Date) =>
+      projects.filter(
+        (p) =>
+          (p.dueDate && isSameDay(new Date(p.dueDate), d)) ||
+          (p.stages ?? []).some((st) => st.dueDate && isSameDay(new Date(st.dueDate), d)),
+      ),
+    [projects],
+  );
+  const dayTasks = useMemo(() => tasksForDay(selected), [tasksForDay, selected]);
+  const dayProjects = useMemo(() => projectsForDay(selected), [projectsForDay, selected]);
+
 
   return (
     <div className="space-y-5">
