@@ -273,9 +273,36 @@ export function ProjectFormBody({
         </Label>
         <div className="space-y-2">
           {form.members.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-2">
-              <span className="text-sm font-medium">{m.name}</span>
-              <Badge variant="outline">{m.role}</Badge>
+            <div
+              key={m.id}
+              className="grid items-center gap-2 rounded-xl bg-muted/60 p-2 sm:grid-cols-[1fr_1fr_auto]"
+            >
+              <Input
+                value={m.name}
+                aria-label="نام عضو"
+                placeholder="نام عضو"
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    members: f.members.map((x) =>
+                      x.id === m.id ? { ...x, name: e.target.value } : x,
+                    ),
+                  }))
+                }
+              />
+              <Input
+                value={m.role}
+                aria-label="نقش عضو"
+                placeholder="نقش (مثلاً کارشناس)"
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    members: f.members.map((x) =>
+                      x.id === m.id ? { ...x, role: e.target.value } : x,
+                    ),
+                  }))
+                }
+              />
               <Button
                 type="button"
                 size="icon"
@@ -294,6 +321,7 @@ export function ProjectFormBody({
             <p className="text-xs text-muted-foreground">عضوی اضافه نشده است.</p>
           )}
         </div>
+
         <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <Input
             value={memberName}
