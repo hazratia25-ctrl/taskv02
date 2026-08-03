@@ -22,10 +22,11 @@ import { PageHeader, EmptyState } from "@/components/app-shell";
 import { Progress } from "@/components/ui/progress";
 import { isOverdue, projectProgress, useStore } from "@/lib/store";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/types";
-import { JALALI_MONTHS, fa, toJalali } from "@/lib/jalali";
+import { JALALI_MONTHS, fa, formatJalali, toJalali } from "@/lib/jalali";
 import { Button } from "@/components/ui/button";
-import { Download, FolderKanban, ListChecks } from "lucide-react";
+import { FileText, FolderKanban, ListChecks } from "lucide-react";
 import { toPng } from "html-to-image";
+import { printReportPdf } from "@/lib/report-pdf";
 import { toast } from "sonner";
 import { ProjectMembers } from "@/components/project-item";
 
@@ -411,8 +412,8 @@ function AnalyticsPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             {scopePicker}
-            <Button onClick={exportImage} disabled={exporting || items.length === 0}>
-              <Download className="size-4" /> {exporting ? "در حال آماده‌سازی…" : "گزارش تصویری"}
+            <Button onClick={exportPdf} disabled={exporting || items.length === 0}>
+              <FileText className="size-4" /> {exporting ? "در حال آماده‌سازی…" : "گزارش PDF"}
             </Button>
           </div>
         }
@@ -426,28 +427,8 @@ function AnalyticsPage() {
           }
         />
       ) : (
-        <div ref={reportRef} className="space-y-5 bg-background p-1">
-          <StatGrid
-            items={
-              scope === "tasks"
-                ? [
-                    { label: "کل وظایف", value: fa(data.total) },
-                    { label: "در حال انجام", value: fa(data.inProgress) },
-                    { label: "انجام‌شده", value: fa(data.completed) },
-                    { label: "اولویت بالا", value: fa(data.high) },
-                    { label: "عقب‌افتاده", value: fa(data.overdue) },
-                    { label: "نرخ تکمیل", value: `${fa(data.rate)}٪` },
-                  ]
-                : [
-                    { label: "کل پروژه‌ها", value: fa(data.total) },
-                    { label: "در حال انجام", value: fa(data.inProgress) },
-                    { label: "تکمیل‌شده", value: fa(data.completed) },
-                    { label: "اولویت بالا", value: fa(data.high) },
-                    { label: "عقب‌افتاده", value: fa(data.overdue) },
-                    { label: "اعضای تیم", value: fa(data.members) },
-                  ]
-            }
-          />
+        <div className="space-y-5 bg-background p-1">
+          <StatGrid items={statCards} />
 
           <div className="surface p-5">
             <div className="mb-2 flex items-center justify-between">
@@ -467,7 +448,7 @@ function AnalyticsPage() {
                 <p className="font-semibold">توزیع وضعیت</p>
                 <ChartTypePicker value={statusType} onChange={setStatusType} />
               </div>
-              <div className="h-64" dir="ltr">
+              <div className="h-64" dir="ltr" ref={statusRef}>
                 <ResponsiveContainer width="100%" height="100%">
                   {renderChart(statusType, data.statusData, STATUS_COLORS)}
                 </ResponsiveContainer>
@@ -481,7 +462,7 @@ function AnalyticsPage() {
                 </p>
                 <ChartTypePicker value={priorityType} onChange={setPriorityType} />
               </div>
-              <div className="h-64" dir="ltr">
+              <div className="h-64" dir="ltr" ref={priorityRef}>
                 <ResponsiveContainer width="100%" height="100%">
                   {renderChart(
                     priorityType,
@@ -498,7 +479,7 @@ function AnalyticsPage() {
               <p className="font-semibold">روند ۳ ماه اخیر</p>
               <ChartTypePicker value={trendType} onChange={setTrendType} />
             </div>
-            <div className="h-72" dir="ltr">
+            <div className="h-72" dir="ltr" ref={trendRef}>
               <ResponsiveContainer width="100%" height="100%">
                 {renderTrend(trendType, data.months)}
               </ResponsiveContainer>
