@@ -28,7 +28,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+export const APP_NAME = "مدیریت وظایف و پروژه‌ها";
+
 const NAV = [
+
   { to: "/", label: "داشبورد", icon: LayoutDashboard },
   { to: "/tasks", label: "وظایف", icon: ListChecks },
   { to: "/projects", label: "پروژه‌ها", icon: FolderKanban },
@@ -83,21 +86,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Avatar>
             <div className="min-w-0">
               <p className="truncate text-base font-bold leading-snug md:text-lg">
-                {profile.role ? `${profile.role} | ${profile.name}` : profile.name}
+                {[profile.role, profile.name].filter(Boolean).join(" | ")}
               </p>
               <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm">
                 {profile.email || "بدون ایمیل"}
               </p>
-              <p className="mt-1 hidden text-[11px] text-muted-foreground md:block">
-                مدیریت وظایف و پروژه‌ها — همگام با حساب آنلاین
-              </p>
+              {(profile.phone || profile.extension) && (
+                <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm">
+                  {[
+                    profile.phone ? fa(profile.phone) : "",
+                    profile.extension ? `داخلی ${fa(profile.extension)}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" | ")}
+                </p>
+              )}
             </div>
           </div>
+
+          <Link
+            to="/"
+            className="hidden min-w-0 items-center gap-2 sm:flex"
+            aria-label={APP_NAME}
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <FolderKanban className="size-5" />
+            </span>
+            <span className="truncate text-sm font-bold md:text-base">{APP_NAME}</span>
+          </Link>
 
           <div className="flex items-center gap-1.5">
             <Link
               to="/notifications"
-              className="relative flex size-11 items-center justify-center rounded-2xl border bg-card/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="relative flex size-11 items-center justify-center rounded-xl border bg-card/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="اعلان‌ها"
             >
               <Bell className="size-5" />
@@ -107,7 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex size-11 items-center justify-center rounded-2xl border bg-card/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex size-11 items-center justify-center rounded-xl border bg-card/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="منوی کاربر"
               >
                 <Menu className="size-5" />
@@ -145,12 +166,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-3 pb-24 pt-4 md:px-6 lg:pb-8">
         <aside className="sticky top-28 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
-          <div className="mb-4 px-2 pt-2">
-            <p className="text-lg font-bold">وظایف و پروژه‌ها</p>
-            <p className="text-xs text-muted-foreground">همگام با حساب آنلاین</p>
+          <div className="mb-4 flex items-center gap-2 px-2 pt-2">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <FolderKanban className="size-5" />
+            </span>
+            <p className="text-base font-bold leading-tight">{APP_NAME}</p>
           </div>
+
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => {
               const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);

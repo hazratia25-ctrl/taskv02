@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { enqueue, flushQueue, type SyncOp } from "./sync-queue";
 import type { Json } from "@/integrations/supabase/types";
+
 import {
   defaultSettings,
   type AppData,
@@ -47,10 +49,13 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
         name: p.name ?? "",
         role: p.role ?? "",
         email: p.email ?? "",
+        phone: p.phone ?? "",
+        extension: p.extension ?? "",
         avatar: p.avatar ?? null,
         createdAt: p.created_at,
       }
     : null;
+
 
   const settings: AppSettings = {
     ...defaultSettings,
@@ -196,28 +201,27 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     ["notifications", notifications],
   ];
 
-  const jobs: PromiseLike<unknown>[] = [];
+  const ops: SyncOp[] = [];
 
   for (const [table, rows] of batches) {
-    const changed = rows.filter((row) => {
+    for (const row of rows) {
       const key = `${table}:${row.id}`;
       const json = JSON.stringify(row);
-      if (rowCache.get(key) === json) return false;
+      if (rowCache.get(key) === json) continue;
       rowCache.set(key, json);
-      return true;
-    });
-    if (changed.length) jobs.push(supabase.from(table).upsert(changed as never));
+      ops.push({ key: `up:${key}`, table, kind: "upsert", row });
+    }
 
-    const idsKey = rows.map((r) => r.id).join("|");
+    const ids = rows.map((r) => r.id);
+    const idsKey = ids.join("|");
     if (idCache.get(table) !== idsKey) {
+      const previous = (idCache.get(table) ?? "").split("|").filter(Boolean);
       idCache.set(table, idsKey);
-      jobs.push(
-        deleteMissing(
-          table,
-          userId,
-          rows.map((r) => r.id),
-        ),
-      );
+      const present = new Set(ids);
+      for (const gone of previous.filter((id) => !present.has(id))) {
+        rowCache.delete(`${table}:${gone}`);
+        ops.push({ key: `del:${table}:${gone}`, table, kind: "delete", rowId: gone });
+      }
     }
   }
 
@@ -227,6 +231,8 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
         name: data.profile.name,
         role: data.profile.role ?? "",
         email: data.profile.email ?? "",
+        phone: data.profile.phone ?? "",
+        extension: data.profile.extension ?? "",
         avatar: data.profile.avatar,
         settings: data.settings as unknown as Json,
       }
@@ -234,26 +240,15 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
   const profileJson = JSON.stringify(profileRow);
   if (profileJson !== profileCache) {
     profileCache = profileJson;
-    jobs.push(
-      data.profile
-        ? supabase
-            .from("profiles")
-            .upsert({ ...profileRow, updated_at: new Date().toISOString() } as never)
-        : supabase
-            .from("profiles")
-            .update({ settings: data.settings as unknown as Json })
-            .eq("id", userId),
-    );
+    ops.push({
+      key: "up:profiles",
+      table: "profiles",
+      kind: "upsert",
+      row: { ...profileRow, updated_at: new Date().toISOString() },
+    });
   }
 
-  await Promise.all(jobs);
+  enqueue(userId, ops);
+  await flushQueue(userId);
 }
 
-async function deleteMissing(table: SyncTable, userId: string, ids: string[]) {
-  let q = supabase.from(table).delete().eq("user_id", userId);
-  if (ids.length) {
-    const list = ids.map((id) => `"${id.replace(/"/g, '\\"')}"`).join(",");
-    q = q.not("id", "in", `(${list})`);
-  }
-  await q;
-}

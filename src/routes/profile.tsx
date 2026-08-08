@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useStore } from "@/lib/store";
-import { fa, formatJalali } from "@/lib/jalali";
-import { isOverdue } from "@/lib/store";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -26,10 +25,12 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, saveProfile, tasks } = useStore();
+  const { profile, saveProfile } = useStore();
   const [name, setName] = useState(profile?.name ?? "");
   const [email, setEmail] = useState(profile?.email ?? "");
   const [role, setRole] = useState(profile?.role ?? "");
+  const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [extension, setExtension] = useState(profile?.extension ?? "");
   const [avatar, setAvatar] = useState(profile?.avatar ?? "");
   const [error, setError] = useState("");
 
@@ -44,16 +45,16 @@ function ProfilePage() {
       name: name.trim(),
       role: role.trim(),
       email: email.trim(),
+      phone: phone.trim(),
+      extension: extension.trim(),
       avatar: avatar.trim() || null,
     });
     toast.success("پروفایل ذخیره شد");
   };
 
-  const completed = tasks.filter((t) => t.status === "COMPLETED").length;
-
   return (
     <div className="space-y-5">
-      <PageHeader title="پروفایل" description="اطلاعات شما فقط روی این دستگاه ذخیره می‌شود" />
+      <PageHeader title="پروفایل" description="اطلاعات حساب کاربری شما" />
 
       <div className="surface flex items-center gap-4 p-5">
         <Avatar className="size-16 rounded-xl">
@@ -67,10 +68,16 @@ function ProfilePage() {
             {profile?.role ? `${profile.role} | ${profile.name}` : profile?.name}
           </p>
           <p className="text-sm text-muted-foreground">{profile?.email || "بدون ایمیل"}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            عضو از {formatJalali(profile?.createdAt ?? null)} — {fa(tasks.length)} وظیفه،{" "}
-            {fa(completed)} تکمیل‌شده، {fa(tasks.filter(isOverdue).length)} عقب‌افتاده
-          </p>
+          {(profile?.phone || profile?.extension) && (
+            <p className="text-sm text-muted-foreground">
+              {[
+                profile?.phone ?? "",
+                profile?.extension ? `داخلی ${profile.extension}` : "",
+              ]
+                .filter(Boolean)
+                .join(" | ")}
+            </p>
+          )}
         </div>
       </div>
 
@@ -92,6 +99,28 @@ function ProfilePage() {
           <Label htmlFor="p-email">ایمیل</Label>
           <Input id="p-email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="p-phone">شماره تلفن</Label>
+            <Input
+              id="p-phone"
+              dir="ltr"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0912…"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="p-ext">شماره داخلی</Label>
+            <Input
+              id="p-ext"
+              dir="ltr"
+              value={extension}
+              onChange={(e) => setExtension(e.target.value)}
+              placeholder="مثلاً ۲۳۴"
+            />
+          </div>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="p-avatar">نشانی تصویر</Label>
           <Input
@@ -107,3 +136,4 @@ function ProfilePage() {
     </div>
   );
 }
+

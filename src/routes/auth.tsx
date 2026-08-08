@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -92,15 +92,18 @@ function AuthPage() {
       <div className="surface w-full max-w-md p-7">
         <div className="mb-6 space-y-2 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <CheckCircle2 className="size-6" />
+            {mode === "signin" ? <LogIn className="size-6" /> : <UserPlus className="size-6" />}
           </div>
           <h1 className="text-2xl font-bold">
             {mode === "signin" ? "ورود به حساب" : "ساخت حساب کاربری"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            با حساب آنلاین، وظایف شما روی همه دستگاه‌ها همگام می‌شود.
+            {mode === "signin"
+              ? "با ایمیل و رمز عبور خود وارد شوید تا وظایف و پروژه‌هایتان بازیابی شود."
+              : "یک حساب جدید بسازید تا وظایف و پروژه‌ها روی همه دستگاه‌ها همگام شوند."}
           </p>
         </div>
+
 
         <form className="space-y-4" onSubmit={submit}>
           {mode === "signup" && (
