@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,8 +76,15 @@ export function TaskItem({ task, onEdit }: { task: Task; onEdit: (t: Task) => vo
                 task.status === "COMPLETED" && "text-muted-foreground line-through",
               )}
             >
-              {task.title}
+              <Link
+                to="/tasks/$taskId"
+                params={{ taskId: task.id }}
+                className="hover:text-primary hover:underline"
+              >
+                {task.title}
+              </Link>
             </h3>
+
             {overdue && (
               <span className="flex items-center gap-1 text-xs text-destructive">
                 <AlertTriangle className="size-3.5" /> عقب‌افتاده

@@ -40,11 +40,23 @@ export interface AppNotification {
   createdAt: string;
 }
 
+export type MemberAccess = "VIEW" | "EDIT" | "MANAGE";
+
+export const ACCESS_LABELS: Record<MemberAccess, string> = {
+  VIEW: "مشاهده",
+  EDIT: "ویرایش",
+  MANAGE: "مدیریت",
+};
+
 export interface ProjectMember {
   id: string;
   name: string;
   role: string;
+  access?: MemberAccess;
+  phone?: string;
+  email?: string;
 }
+
 
 export interface ProjectStage {
   id: string;
@@ -73,9 +85,12 @@ export interface UserProfile {
   name: string;
   role: string;
   email: string;
+  phone?: string;
+  extension?: string;
   avatar: string | null;
   createdAt: string;
 }
+
 
 export type ThemeMode = "light" | "dark" | "system";
 

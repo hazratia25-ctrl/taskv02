@@ -1,23 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageHeader, EmptyState } from "@/components/app-shell";
-import { TaskItem } from "@/components/task-item";
 import { TaskDialog } from "@/components/task-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { isOverdue, projectProgress, useStore } from "@/lib/store";
-import { fa, daysBetween } from "@/lib/jalali";
+import { projectProgress, useStore } from "@/lib/store";
+import { fa, formatJalali } from "@/lib/jalali";
 import type { Task } from "@/lib/types";
-import {
-  Plus,
-  ListTodo,
-  CheckCircle2,
-  Loader2,
-  AlertTriangle,
-  Flame,
-  FolderKanban,
-  Users,
-} from "lucide-react";
+import { STATUS_LABELS } from "@/lib/types";
+import { Plus, FolderKanban, Users, ListChecks, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/")({
@@ -26,153 +17,39 @@ export const Route = createFileRoute("/")({
       { title: "مدیریت‌وظایف" },
       {
         name: "description",
-        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+        content: "نمای کلی وظایف و پروژه‌ها، پیشرفت مراحل و مهلت‌ها.",
       },
       { property: "og:title", content: "مدیریت‌وظایف" },
       {
         property: "og:description",
-        content: "نمای کلی وظایف، پیشرفت، مهلت‌های نزدیک و کارهای عقب‌افتاده.",
+        content: "نمای کلی وظایف و پروژه‌ها، پیشرفت مراحل و مهلت‌ها.",
       },
     ],
   }),
   component: Dashboard,
 });
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  tone = "default",
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  tone?: "default" | "success" | "warning" | "danger" | "primary";
-}) {
-  const tones: Record<string, string> = {
-    default: "bg-muted text-muted-foreground",
-    success: "bg-success/15 text-success",
-    warning: "bg-warning/20 text-warning-foreground",
-    danger: "bg-destructive/12 text-destructive",
-    primary: "bg-primary/12 text-primary",
-  };
-  return (
-    <div className="surface flex items-center gap-3 p-4">
-      <div className={`flex size-10 items-center justify-center rounded-xl ${tones[tone]}`}>
-        <Icon className="size-5" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold">{fa(value)}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  tasks,
-  onEdit,
-}: {
-  title: string;
-  tasks: Task[];
-  onEdit: (t: Task) => void;
-}) {
-  if (tasks.length === 0) return null;
-  return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="grid gap-3">
-        {tasks.map((t) => (
-          <TaskItem key={t.id} task={t} onEdit={onEdit} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function Dashboard() {
   const { tasks, projects } = useStore();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Task | null>(null);
+  const [editing] = useState<Task | null>(null);
 
-  const stats = useMemo(() => {
-    const completed = tasks.filter((t) => t.status === "COMPLETED");
-    const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS");
-    const todo = tasks.filter((t) => t.status === "TODO");
-    const overdue = tasks.filter(isOverdue);
-    const high = tasks.filter((t) => t.priority === "HIGH" && t.status !== "COMPLETED");
-    return {
-      total: tasks.length,
-      completed: completed.length,
-      inProgress: inProgress.length,
-      todo: todo.length,
-      overdue: overdue.length,
-      high: high.length,
-      rate: tasks.length ? Math.round((completed.length / tasks.length) * 100) : 0,
-      overdueTasks: overdue,
-      highTasks: high,
-    };
-  }, [tasks]);
-
-  const recent = useMemo(
-    () => [...tasks].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4),
+  const recentTasks = useMemo(
+    () => [...tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4),
     [tasks],
   );
-
-  const upcoming = useMemo(
-    () =>
-      tasks
-        .filter(
-          (t) =>
-            t.dueDate &&
-            t.status !== "COMPLETED" &&
-            daysBetween(new Date(), new Date(t.dueDate)) >= 0 &&
-            daysBetween(new Date(), new Date(t.dueDate)) <= 7,
-        )
-        .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))
-        .slice(0, 5),
-    [tasks],
-  );
-
-  const edit = (t: Task) => {
-    setEditing(t);
-    setOpen(true);
-  };
 
   return (
     <div className="space-y-7">
       <PageHeader
         title="داشبورد"
-        description="نمای کلی وضعیت وظایف شما"
+        description="نمای کلی وضعیت وظایف و پروژه‌ها"
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          >
+          <Button onClick={() => setOpen(true)}>
             <Plus className="size-4" /> ایجاد وظیفه یا پروژه
           </Button>
         }
       />
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatCard label="کل وظایف" value={stats.total} icon={ListTodo} tone="primary" />
-        <StatCard label="تکمیل‌شده" value={stats.completed} icon={CheckCircle2} tone="success" />
-        <StatCard label="در حال انجام" value={stats.inProgress} icon={Loader2} tone="primary" />
-        <StatCard label="انجام‌نشده" value={stats.todo} icon={ListTodo} />
-        <StatCard label="عقب‌افتاده" value={stats.overdue} icon={AlertTriangle} tone="danger" />
-        <StatCard label="اولویت بالا" value={stats.high} icon={Flame} tone="warning" />
-      </div>
-
-      <div className="surface p-5">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="font-semibold">نرخ تکمیل</p>
-          <p className="text-sm text-muted-foreground">{fa(stats.rate)}٪</p>
-        </div>
-        <Progress value={stats.rate} />
-      </div>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -192,7 +69,8 @@ function Dashboard() {
             {projects.slice(0, 4).map((pr) => (
               <Link
                 key={pr.id}
-                to="/projects"
+                to="/projects/$projectId"
+                params={{ projectId: pr.id }}
                 className="surface lift space-y-3 p-4 transition-colors"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -208,11 +86,6 @@ function Dashboard() {
                   <span className="flex items-center gap-1">
                     <Users className="size-3.5" /> {fa((pr.members ?? []).length)} عضو
                   </span>
-                  {(pr.members ?? []).slice(0, 2).map((m) => (
-                    <span key={m.id}>
-                      {m.name} | {m.role}
-                    </span>
-                  ))}
                 </div>
               </Link>
             ))}
@@ -220,32 +93,51 @@ function Dashboard() {
         )}
       </section>
 
-      {tasks.length === 0 ? (
-        <EmptyState
-          title="هنوز وظیفه‌ای ایجاد نکرده‌اید"
-          description="اولین وظیفه خود را بسازید تا داشبورد، تقویم و آمار پر شوند."
-          action={
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setOpen(true);
-              }}
-            >
-              <Plus className="size-4" /> ایجاد اولین مورد
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-7">
-          <Section title="عقب‌افتاده" tasks={stats.overdueTasks.slice(0, 3)} onEdit={edit} />
-          <Section title="مهلت نزدیک (۷ روز آینده)" tasks={upcoming} onEdit={edit} />
-          <Section title="مهم" tasks={stats.highTasks.slice(0, 3)} onEdit={edit} />
-          <Section title="آخرین وظایف" tasks={recent} onEdit={edit} />
-          <Link to="/tasks" className="inline-block text-sm text-primary hover:underline">
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <ListChecks className="size-5 text-primary" /> وظایف
+          </h2>
+          <Link to="/tasks" className="text-sm text-primary hover:underline">
             مشاهده همه وظایف →
           </Link>
         </div>
-      )}
+        {tasks.length === 0 ? (
+          <EmptyState
+            title="هنوز وظیفه‌ای ایجاد نکرده‌اید"
+            description="اولین وظیفه خود را بسازید تا داشبورد، تقویم و آمار پر شوند."
+            action={
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="size-4" /> ایجاد اولین مورد
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {recentTasks.map((t) => (
+              <Link
+                key={t.id}
+                to="/tasks/$taskId"
+                params={{ taskId: t.id }}
+                className="surface lift space-y-2 p-4 transition-colors"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{t.title}</p>
+                  <Badge variant="outline">{STATUS_LABELS[t.status]}</Badge>
+                </div>
+                {t.description && (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{t.description}</p>
+                )}
+                {t.dueDate && (
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="size-3.5" /> مهلت: {formatJalali(t.dueDate, true)}
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <TaskDialog open={open} onOpenChange={setOpen} task={editing} />
     </div>

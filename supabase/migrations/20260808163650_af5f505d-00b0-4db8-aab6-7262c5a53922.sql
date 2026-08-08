@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS phone text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS extension text NOT NULL DEFAULT '';

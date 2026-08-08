@@ -20,6 +20,9 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TasksTaskIdRouteImport } from './routes/tasks_.$taskId'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects_.$projectId'
+import { Route as ProjectsProjectIdMembersRouteImport } from './routes/projects_.$projectId_.members'
 import { Route as ApiPublicPushKeyRouteImport } from './routes/api/public/push/key'
 import { Route as ApiPublicHooksPushRemindersRouteImport } from './routes/api/public/hooks/push-reminders'
 
@@ -78,6 +81,22 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
+  id: '/tasks_/$taskId',
+  path: '/tasks/$taskId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects_/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdMembersRoute =
+  ProjectsProjectIdMembersRouteImport.update({
+    id: '/projects_/$projectId_/members',
+    path: '/projects/$projectId/members',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPushKeyRoute = ApiPublicPushKeyRouteImport.update({
   id: '/api/public/push/key',
   path: '/api/public/push/key',
@@ -102,6 +121,9 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/projects/$projectId/members': typeof ProjectsProjectIdMembersRoute
   '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
   '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
@@ -117,6 +139,9 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/projects/$projectId/members': typeof ProjectsProjectIdMembersRoute
   '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
   '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
@@ -133,6 +158,9 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tasks': typeof TasksRoute
+  '/projects_/$projectId': typeof ProjectsProjectIdRoute
+  '/tasks_/$taskId': typeof TasksTaskIdRoute
+  '/projects_/$projectId_/members': typeof ProjectsProjectIdMembersRoute
   '/api/public/hooks/push-reminders': typeof ApiPublicHooksPushRemindersRoute
   '/api/public/push/key': typeof ApiPublicPushKeyRoute
 }
@@ -150,6 +178,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/projects/$projectId/members'
     | '/api/public/hooks/push-reminders'
     | '/api/public/push/key'
   fileRoutesByTo: FileRoutesByTo
@@ -165,6 +196,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/projects/$projectId/members'
     | '/api/public/hooks/push-reminders'
     | '/api/public/push/key'
   id:
@@ -180,6 +214,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/tasks'
+    | '/projects_/$projectId'
+    | '/tasks_/$taskId'
+    | '/projects_/$projectId_/members'
     | '/api/public/hooks/push-reminders'
     | '/api/public/push/key'
   fileRoutesById: FileRoutesById
@@ -196,6 +233,9 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TasksRoute: typeof TasksRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  TasksTaskIdRoute: typeof TasksTaskIdRoute
+  ProjectsProjectIdMembersRoute: typeof ProjectsProjectIdMembersRoute
   ApiPublicHooksPushRemindersRoute: typeof ApiPublicHooksPushRemindersRoute
   ApiPublicPushKeyRoute: typeof ApiPublicPushKeyRoute
 }
@@ -279,6 +319,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks_/$taskId': {
+      id: '/tasks_/$taskId'
+      path: '/tasks/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof TasksTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects_/$projectId': {
+      id: '/projects_/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects_/$projectId_/members': {
+      id: '/projects_/$projectId_/members'
+      path: '/projects/$projectId/members'
+      fullPath: '/projects/$projectId/members'
+      preLoaderRoute: typeof ProjectsProjectIdMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/push/key': {
       id: '/api/public/push/key'
       path: '/api/public/push/key'
@@ -308,9 +369,22 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TasksRoute: TasksRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  TasksTaskIdRoute: TasksTaskIdRoute,
+  ProjectsProjectIdMembersRoute: ProjectsProjectIdMembersRoute,
   ApiPublicHooksPushRemindersRoute: ApiPublicHooksPushRemindersRoute,
   ApiPublicPushKeyRoute: ApiPublicPushKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

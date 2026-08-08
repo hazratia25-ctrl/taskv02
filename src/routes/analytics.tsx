@@ -416,15 +416,19 @@ function AnalyticsPage() {
       <PageHeader
         title="آمار و تحلیل"
         description={scope === "tasks" ? "تحلیل وظایف شما" : "تحلیل پروژه‌ها و مراحل آن‌ها"}
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            {scopePicker}
-            <Button onClick={exportPdf} disabled={exporting || items.length === 0}>
-              <FileText className="size-4" /> {exporting ? "در حال آماده‌سازی…" : "گزارش PDF"}
-            </Button>
-          </div>
-        }
       />
+
+      <div className="surface flex flex-wrap items-center justify-between gap-3 p-4">
+        {scopePicker}
+        <Button
+          className="min-w-40"
+          onClick={exportPdf}
+          disabled={exporting || items.length === 0}
+        >
+          <FileText className="size-4" /> {exporting ? "در حال آماده‌سازی…" : "گزارش PDF"}
+        </Button>
+      </div>
+
 
       {items.length === 0 ? (
         <EmptyState

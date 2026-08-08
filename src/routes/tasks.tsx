@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { isOverdue, useStore } from "@/lib/store";
-import { daysBetween } from "@/lib/jalali";
+import { daysBetween, fa } from "@/lib/jalali";
 import type { Task } from "@/lib/types";
 import { Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -161,9 +161,29 @@ function TasksPage() {
     setOpen(true);
   };
 
+  const doneCount = tasks.filter((t) => t.status === "COMPLETED").length;
+  const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
+  const avgProgress = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
+
   return (
     <div className="space-y-5">
       <PageHeader title="وظایف" description="جست‌وجو، فیلتر و مرتب‌سازی" />
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          { label: "کل وظایف", value: fa(tasks.length) },
+          { label: "در حال انجام", value: fa(inProgress) },
+          { label: "تکمیل‌شده", value: fa(doneCount) },
+          { label: "میانگین پیشرفت", value: `${fa(avgProgress)}٪` },
+        ].map((s) => (
+          <div key={s.label} className="surface p-4">
+            <p className="text-2xl font-bold">{s.value}</p>
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+
 
       <div className="surface space-y-4 p-4">
         <div className="relative">

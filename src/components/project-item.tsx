@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,16 @@ export function ProjectItem({
     <article className={cn("surface lift p-4", project.status === "COMPLETED" && "opacity-80")}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold">{project.title}</h3>
+          <h3 className="text-base font-semibold">
+            <Link
+              to="/projects/$projectId"
+              params={{ projectId: project.id }}
+              className="hover:text-primary hover:underline"
+            >
+              {project.title}
+            </Link>
+          </h3>
+
           {project.description && (
             <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
           )}
