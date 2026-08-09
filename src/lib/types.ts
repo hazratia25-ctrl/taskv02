@@ -28,7 +28,14 @@ export interface Tag {
   createdAt: string;
 }
 
-export type NotificationType = "DUE_SOON" | "DUE_TODAY" | "OVERDUE";
+export type NotificationType =
+  | "DUE_SOON"
+  | "DUE_TODAY"
+  | "OVERDUE"
+  | "INVITE"
+  | "MEMBER_ACCEPTED"
+  | "MEMBER_REJECTED"
+  | "STAGE_DONE";
 
 export interface AppNotification {
   id: string;
