@@ -121,6 +121,9 @@ function NotificationsPage() {
         }
       />
 
+      <InvitesCard />
+
+
       {notifications.length === 0 ? (
         <EmptyState
           title="اعلانی وجود ندارد"
