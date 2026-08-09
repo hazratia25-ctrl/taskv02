@@ -202,7 +202,10 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     updated_at: t.updatedAt,
     completed_at: t.completedAt,
   }));
-  const projects: Row[] = data.projects.map((p) => ({
+  // shared (read-only) projects belong to another account and are never uploaded from here
+  const projects: Row[] = data.projects
+    .filter((p) => !p.readOnly)
+    .map((p) => ({
     user_id: userId,
     id: p.id,
     title: p.title,
