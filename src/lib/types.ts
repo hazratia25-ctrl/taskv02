@@ -28,7 +28,14 @@ export interface Tag {
   createdAt: string;
 }
 
-export type NotificationType = "DUE_SOON" | "DUE_TODAY" | "OVERDUE";
+export type NotificationType =
+  | "DUE_SOON"
+  | "DUE_TODAY"
+  | "OVERDUE"
+  | "INVITE"
+  | "MEMBER_ACCEPTED"
+  | "MEMBER_REJECTED"
+  | "STAGE_DONE";
 
 export interface AppNotification {
   id: string;
@@ -48,6 +55,8 @@ export const ACCESS_LABELS: Record<MemberAccess, string> = {
   MANAGE: "مدیریت",
 };
 
+export type MemberStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+
 export interface ProjectMember {
   id: string;
   name: string;
@@ -55,14 +64,21 @@ export interface ProjectMember {
   access?: MemberAccess;
   phone?: string;
   email?: string;
+  /** set when the member is a real signed-up account */
+  userId?: string | null;
+  userCode?: string | null;
+  username?: string | null;
+  avatar?: string | null;
+  status?: MemberStatus;
 }
-
 
 export interface ProjectStage {
   id: string;
   title: string;
   done: boolean;
   dueDate: string | null;
+  /** ProjectMember.id of the person responsible for this stage */
+  assigneeId?: string | null;
 }
 
 export interface Project {
@@ -79,6 +95,11 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  /** true when the project belongs to someone else and is shared with the current user */
+  readOnly?: boolean;
+  /** current user's ProjectMember.id inside a shared project */
+  myMemberId?: string | null;
+  sharedByName?: string | null;
 }
 
 export interface UserProfile {
@@ -89,6 +110,9 @@ export interface UserProfile {
   extension?: string;
   avatar: string | null;
   createdAt: string;
+  /** unique, read-only sharing code (e.g. TM-4F9K2) */
+  userCode?: string;
+  username?: string | null;
 }
 
 

@@ -23,7 +23,9 @@ import {
 } from "./types";
 import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
-import { fetchCloud, pushCloud } from "./cloud";
+import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects } from "./cloud";
+import { toggleAssignedStage } from "./collab.functions";
+import { toast } from "sonner";
 
 const STORAGE_PREFIX = "task-manager-offline-v1";
 const LEGACY_KEY = "task-manager-offline-v1";
@@ -91,6 +93,8 @@ interface StoreValue extends AppData {
   deleteProject: (id: string) => void;
   setProjectStatus: (id: string, status: TaskStatus) => void;
   toggleStage: (projectId: string, stageId: string) => void;
+  /** Re-pulls shared projects and owner-side stage updates from the cloud. */
+  refreshCollab: () => Promise<void>;
   createCategory: (name: string, color: string) => void;
   updateCategory: (id: string, patch: Partial<Pick<Category, "name" | "color">>) => void;
   deleteCategory: (id: string) => void;
@@ -289,6 +293,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const patch = useCallback((fn: (prev: AppData) => AppData) => setData(fn), []);
 
+  // pulls shared projects plus stage ticks made by invited members on owned projects
+  const refreshCollab = useCallback(async () => {
+    if (!user || !hydrated.current) return;
+    try {
+      const [shared, owned] = await Promise.all([
+        fetchSharedProjects(user.id),
+        fetchOwnedProjects(user.id),
+      ]);
+      setData((prev) => ({
+        ...prev,
+        projects: [
+          ...prev.projects
+            .filter((p) => !p.readOnly)
+            .map((p) => {
+              const remote = owned.find((o) => o.id === p.id);
+              // only remote stage state can change behind our back; keep local edits otherwise
+              return remote && remote.updatedAt > p.updatedAt ? { ...p, stages: remote.stages } : p;
+            }),
+          ...shared,
+        ],
+      }));
+    } catch {
+      /* offline: keep whatever we have */
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!ready || !user) return;
+    void refreshCollab();
+    const t = window.setInterval(() => void refreshCollab(), 45_000);
+    return () => window.clearInterval(t);
+  }, [ready, user, refreshCollab]);
+
+
   const value = useMemo<StoreValue>(() => {
     const now = () => new Date().toISOString();
 
@@ -405,7 +443,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               : pr,
           ),
         })),
-      toggleStage: (projectId, stageId) =>
+      refreshCollab,
+      toggleStage: (projectId, stageId) => {
+        const target = data.projects.find((p) => p.id === projectId);
+        if (target?.readOnly) {
+          // shared project: only the assigned member may tick, and only on the server
+          void toggleAssignedStage({ data: { projectId, stageId } })
+            .then(() => refreshCollab())
+            .catch((e: unknown) =>
+              toast.error(e instanceof Error ? e.message : "به‌روزرسانی مرحله ناموفق بود"),
+            );
+          return;
+        }
         patch((p) => ({
           ...p,
           projects: p.projects.map((pr) =>
@@ -419,7 +468,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 }
               : pr,
           ),
-        })),
+        }));
+      },
       createCategory: (name, color) =>
         patch((p) => ({
           ...p,
@@ -506,7 +556,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       resetAll: () => setData(emptyData),
     };
-  }, [data, ready, patch]);
+  }, [data, ready, patch, refreshCollab]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

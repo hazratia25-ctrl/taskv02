@@ -15,7 +15,12 @@ import {
 import { useStore, uid } from "@/lib/store";
 import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
-import { ArrowRight, Plus, Trash2, Users } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Users, Search, UserPlus } from "lucide-react";
+import {
+  searchAppUsers,
+  inviteProjectMember,
+  type FoundUser,
+} from "@/lib/collab.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projects_/$projectId_/members")({
@@ -34,6 +39,105 @@ export const Route = createFileRoute("/projects_/$projectId_/members")({
 });
 
 const ACCESS_VALUES: MemberAccess[] = ["VIEW", "EDIT", "MANAGE"];
+
+/** Search a real signed-up account by user code, username, or email and invite it. */
+function InviteRealUser({
+  project,
+  members,
+  setMembers,
+}: {
+  project: { id: string; title: string };
+  members: ProjectMember[];
+  setMembers: (next: ProjectMember[]) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [role, setRole] = useState("");
+  const [results, setResults] = useState<FoundUser[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const search = async () => {
+    setBusy(true);
+    try {
+      const found = await searchAppUsers({ data: { q } });
+      setResults(found);
+      if (found.length === 0) toast.error("کاربری با این شناسه پیدا نشد.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "جست‌وجو ناموفق بود");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const invite = async (u: FoundUser) => {
+    setBusy(true);
+    try {
+      await inviteProjectMember({ data: { projectId: project.id, memberUserId: u.id, role } });
+      if (!members.some((m) => m.userId === u.id)) {
+        setMembers([
+          ...members,
+          {
+            id: uid(),
+            name: u.name || u.userCode,
+            role: role.trim(),
+            access: "VIEW",
+            userId: u.id,
+            userCode: u.userCode,
+            avatar: u.avatar,
+            status: "PENDING",
+          },
+        ]);
+      }
+      toast.success("دعوت ارسال شد؛ پس از پذیرش، دسترسی فعال می‌شود.");
+      setResults([]);
+      setQ("");
+      setRole("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ارسال دعوت ناموفق بود");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="surface space-y-3 p-4">
+      <p className="flex items-center gap-2 font-semibold">
+        <Search className="size-4 text-primary" /> دعوت کاربر واقعی
+      </p>
+      <p className="text-xs text-muted-foreground">
+        شناسه کاربری (مثل TM-4F9K2)، نام کاربری یا ایمیل عضو را وارد کنید.
+      </p>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="TM-… یا نام کاربری یا ایمیل"
+        />
+        <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="نقش در پروژه" />
+        <Button disabled={busy || q.trim().length < 3} onClick={search}>
+          <Search className="size-4" /> جست‌وجو
+        </Button>
+      </div>
+      {results.length > 0 && (
+        <div className="grid gap-2">
+          {results.map((u) => (
+            <div key={u.id} className="flex items-center justify-between gap-2 rounded-xl border p-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{u.name || u.userCode}</p>
+                <p className="truncate text-xs text-muted-foreground" dir="ltr">
+                  {u.userCode}
+                  {u.username ? ` · ${u.username}` : ""}
+                </p>
+              </div>
+              <Button size="sm" disabled={busy} onClick={() => invite(u)}>
+                <UserPlus className="size-4" /> دعوت
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function MembersPage() {
   const { projectId } = Route.useParams();
@@ -94,7 +198,10 @@ function MembersPage() {
         }
       />
 
+      <InviteRealUser project={project} members={members} setMembers={setMembers} />
+
       <div className="surface space-y-3 p-4">
+
         <p className="flex items-center gap-2 font-semibold">
           <Plus className="size-4 text-primary" /> افزودن عضو جدید
         </p>

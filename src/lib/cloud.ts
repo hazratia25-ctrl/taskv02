@@ -28,20 +28,82 @@ export interface CloudSnapshot {
   settings: AppSettings;
 }
 
+type ProjectRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  category_id: string | null;
+  tag_ids: string[] | null;
+  due_date: string | null;
+  members: unknown;
+  stages: unknown;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
+function mapProject(row: ProjectRow, userId: string): Project {
+  const members = (row.members as ProjectMember[] | null) ?? [];
+  const shared = row.user_id !== userId;
+  const mine = members.find((m) => m.userId === userId);
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? "",
+    status: row.status as TaskStatus,
+    priority: row.priority as TaskPriority,
+    categoryId: row.category_id,
+    tagIds: row.tag_ids ?? [],
+    dueDate: row.due_date,
+    members,
+    stages: (row.stages as ProjectStage[] | null) ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    completedAt: row.completed_at,
+    ...(shared ? { readOnly: true, myMemberId: mine?.id ?? null } : {}),
+  };
+}
+
+/** Projects owned by other accounts where the user accepted an invite. */
+export async function fetchSharedProjects(userId: string): Promise<Project[]> {
+  const { data: memberships } = await supabase
+    .from("project_members")
+    .select("project_id")
+    .eq("member_user_id", userId)
+    .eq("status", "ACCEPTED");
+  const ids = (memberships ?? []).map((m) => m.project_id);
+  if (ids.length === 0) return [];
+  const { data } = await supabase.from("projects").select("*").in("id", ids);
+  return ((data ?? []) as ProjectRow[])
+    .filter((row) => row.user_id !== userId)
+    .map((row) => mapProject(row, userId));
+}
+
+/** Owned projects, used to pick up stage ticks made by invited members. */
+export async function fetchOwnedProjects(userId: string): Promise<Project[]> {
+  const { data } = await supabase.from("projects").select("*").eq("user_id", userId);
+  return ((data ?? []) as ProjectRow[]).map((row) => mapProject(row, userId));
+}
+
 export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
-  const [profileRes, tasksRes, projectsRes, catsRes, tagsRes, notifsRes] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    supabase.from("tasks").select("*").eq("user_id", userId),
-    supabase.from("projects").select("*").eq("user_id", userId),
-    supabase.from("categories").select("*").eq("user_id", userId),
-    supabase.from("tags").select("*").eq("user_id", userId),
-    supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(200),
-  ]);
+  const [profileRes, tasksRes, projectsRes, catsRes, tagsRes, notifsRes, shared] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("tasks").select("*").eq("user_id", userId),
+      supabase.from("projects").select("*").eq("user_id", userId),
+      supabase.from("categories").select("*").eq("user_id", userId),
+      supabase.from("tags").select("*").eq("user_id", userId),
+      supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      fetchSharedProjects(userId).catch(() => [] as Project[]),
+    ]);
 
   const p = profileRes.data;
   const profile: UserProfile | null = p
@@ -53,6 +115,8 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
         extension: p.extension ?? "",
         avatar: p.avatar ?? null,
         createdAt: p.created_at,
+        userCode: p.user_code,
+        username: p.username ?? null,
       }
     : null;
 
@@ -78,21 +142,12 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
       updatedAt: t.updated_at,
       completedAt: t.completed_at,
     })),
-    projects: (projectsRes.data ?? []).map((p2) => ({
-      id: p2.id,
-      title: p2.title,
-      description: p2.description ?? "",
-      status: p2.status as TaskStatus,
-      priority: p2.priority as TaskPriority,
-      categoryId: p2.category_id,
-      tagIds: p2.tag_ids ?? [],
-      dueDate: p2.due_date,
-      members: (p2.members as unknown as ProjectMember[] | null) ?? [],
-      stages: (p2.stages as unknown as ProjectStage[] | null) ?? [],
-      createdAt: p2.created_at,
-      updatedAt: p2.updated_at,
-      completedAt: p2.completed_at,
-    })),
+    projects: [
+      ...((projectsRes.data ?? []) as unknown as ProjectRow[]).map((row) =>
+        mapProject(row, userId),
+      ),
+      ...shared,
+    ],
     categories: (catsRes.data ?? []).map((c) => ({
       id: c.id,
       name: c.name,
@@ -153,22 +208,25 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     updated_at: t.updatedAt,
     completed_at: t.completedAt,
   }));
-  const projects: Row[] = data.projects.map((p) => ({
-    user_id: userId,
-    id: p.id,
-    title: p.title,
-    description: p.description ?? "",
-    status: p.status,
-    priority: p.priority,
-    category_id: p.categoryId,
-    tag_ids: p.tagIds ?? [],
-    due_date: p.dueDate,
-    members: (p.members ?? []) as unknown as Json,
-    stages: (p.stages ?? []) as unknown as Json,
-    created_at: p.createdAt,
-    updated_at: p.updatedAt,
-    completed_at: p.completedAt,
-  }));
+  // shared (read-only) projects belong to another account and are never uploaded from here
+  const projects: Row[] = data.projects
+    .filter((p) => !p.readOnly)
+    .map((p) => ({
+      user_id: userId,
+      id: p.id,
+      title: p.title,
+      description: p.description ?? "",
+      status: p.status,
+      priority: p.priority,
+      category_id: p.categoryId,
+      tag_ids: p.tagIds ?? [],
+      due_date: p.dueDate,
+      members: (p.members ?? []) as unknown as Json,
+      stages: (p.stages ?? []) as unknown as Json,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt,
+      completed_at: p.completedAt,
+    }));
   const categories: Row[] = data.categories.map((c) => ({
     user_id: userId,
     id: c.id,
@@ -234,6 +292,7 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
         phone: data.profile.phone ?? "",
         extension: data.profile.extension ?? "",
         avatar: data.profile.avatar,
+        username: data.profile.username ?? null,
         settings: data.settings as unknown as Json,
       }
     : { id: userId, settings: data.settings as unknown as Json };
