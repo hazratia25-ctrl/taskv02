@@ -83,6 +83,8 @@ export type Database = {
           role: string
           settings: Json
           updated_at: string
+          user_code: string
+          username: string | null
         }
         Insert: {
           avatar?: string | null
@@ -95,6 +97,8 @@ export type Database = {
           role?: string
           settings?: Json
           updated_at?: string
+          user_code: string
+          username?: string | null
         }
         Update: {
           avatar?: string | null
@@ -106,6 +110,47 @@ export type Database = {
           phone?: string
           role?: string
           settings?: Json
+          updated_at?: string
+          user_code?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      project_members: {
+        Row: {
+          access: string
+          created_at: string
+          id: string
+          member_user_id: string
+          owner_id: string
+          project_id: string
+          role: string
+          stage_ids: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access?: string
+          created_at?: string
+          id?: string
+          member_user_id: string
+          owner_id: string
+          project_id: string
+          role?: string
+          stage_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access?: string
+          created_at?: string
+          id?: string
+          member_user_id?: string
+          owner_id?: string
+          project_id?: string
+          role?: string
+          stage_ids?: string[]
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -262,7 +307,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      gen_user_code: { Args: never; Returns: string }
+      is_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      search_app_users: {
+        Args: { _q: string }
+        Returns: {
+          avatar: string
+          id: string
+          name: string
+          user_code: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
