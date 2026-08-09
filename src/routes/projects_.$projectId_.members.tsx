@@ -94,7 +94,10 @@ function MembersPage() {
         }
       />
 
+      <InviteRealUser project={project} members={members} setMembers={setMembers} />
+
       <div className="surface space-y-3 p-4">
+
         <p className="flex items-center gap-2 font-semibold">
           <Plus className="size-4 text-primary" /> افزودن عضو جدید
         </p>
