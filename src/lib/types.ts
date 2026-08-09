@@ -110,6 +110,9 @@ export interface UserProfile {
   extension?: string;
   avatar: string | null;
   createdAt: string;
+  /** unique, read-only sharing code (e.g. TM-4F9K2) */
+  userCode?: string;
+  username?: string | null;
 }
 
 
