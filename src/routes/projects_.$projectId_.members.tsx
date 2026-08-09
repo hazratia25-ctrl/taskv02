@@ -15,7 +15,12 @@ import {
 import { useStore, uid } from "@/lib/store";
 import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
-import { ArrowRight, Plus, Trash2, Users } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Users, Search, UserPlus } from "lucide-react";
+import {
+  searchAppUsers,
+  inviteProjectMember,
+  type FoundUser,
+} from "@/lib/collab.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projects_/$projectId_/members")({
