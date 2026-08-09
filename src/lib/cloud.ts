@@ -136,21 +136,12 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
       updatedAt: t.updated_at,
       completedAt: t.completed_at,
     })),
-    projects: (projectsRes.data ?? []).map((p2) => ({
-      id: p2.id,
-      title: p2.title,
-      description: p2.description ?? "",
-      status: p2.status as TaskStatus,
-      priority: p2.priority as TaskPriority,
-      categoryId: p2.category_id,
-      tagIds: p2.tag_ids ?? [],
-      dueDate: p2.due_date,
-      members: (p2.members as unknown as ProjectMember[] | null) ?? [],
-      stages: (p2.stages as unknown as ProjectStage[] | null) ?? [],
-      createdAt: p2.created_at,
-      updatedAt: p2.updated_at,
-      completedAt: p2.completed_at,
-    })),
+    projects: [
+      ...((projectsRes.data ?? []) as unknown as ProjectRow[]).map((row) =>
+        mapProject(row, userId),
+      ),
+      ...shared,
+    ],
     categories: (catsRes.data ?? []).map((c) => ({
       id: c.id,
       name: c.name,
