@@ -28,20 +28,76 @@ export interface CloudSnapshot {
   settings: AppSettings;
 }
 
+type ProjectRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  category_id: string | null;
+  tag_ids: string[] | null;
+  due_date: string | null;
+  members: unknown;
+  stages: unknown;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
+function mapProject(row: ProjectRow, userId: string): Project {
+  const members = (row.members as ProjectMember[] | null) ?? [];
+  const shared = row.user_id !== userId;
+  const mine = members.find((m) => m.userId === userId);
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? "",
+    status: row.status as TaskStatus,
+    priority: row.priority as TaskPriority,
+    categoryId: row.category_id,
+    tagIds: row.tag_ids ?? [],
+    dueDate: row.due_date,
+    members,
+    stages: (row.stages as ProjectStage[] | null) ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    completedAt: row.completed_at,
+    ...(shared ? { readOnly: true, myMemberId: mine?.id ?? null } : {}),
+  };
+}
+
+/** Projects owned by other accounts where the user accepted an invite. */
+export async function fetchSharedProjects(userId: string): Promise<Project[]> {
+  const { data: memberships } = await supabase
+    .from("project_members")
+    .select("project_id")
+    .eq("member_user_id", userId)
+    .eq("status", "ACCEPTED");
+  const ids = (memberships ?? []).map((m) => m.project_id);
+  if (ids.length === 0) return [];
+  const { data } = await supabase.from("projects").select("*").in("id", ids);
+  return ((data ?? []) as ProjectRow[])
+    .filter((row) => row.user_id !== userId)
+    .map((row) => mapProject(row, userId));
+}
+
 export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
-  const [profileRes, tasksRes, projectsRes, catsRes, tagsRes, notifsRes] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    supabase.from("tasks").select("*").eq("user_id", userId),
-    supabase.from("projects").select("*").eq("user_id", userId),
-    supabase.from("categories").select("*").eq("user_id", userId),
-    supabase.from("tags").select("*").eq("user_id", userId),
-    supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(200),
-  ]);
+  const [profileRes, tasksRes, projectsRes, catsRes, tagsRes, notifsRes, shared] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("tasks").select("*").eq("user_id", userId),
+      supabase.from("projects").select("*").eq("user_id", userId),
+      supabase.from("categories").select("*").eq("user_id", userId),
+      supabase.from("tags").select("*").eq("user_id", userId),
+      supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      fetchSharedProjects(userId).catch(() => [] as Project[]),
+    ]);
 
   const p = profileRes.data;
   const profile: UserProfile | null = p
@@ -53,6 +109,8 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
         extension: p.extension ?? "",
         avatar: p.avatar ?? null,
         createdAt: p.created_at,
+        userCode: p.user_code,
+        username: p.username ?? null,
       }
     : null;
 
