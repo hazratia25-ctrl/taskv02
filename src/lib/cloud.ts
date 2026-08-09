@@ -286,6 +286,7 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
         phone: data.profile.phone ?? "",
         extension: data.profile.extension ?? "",
         avatar: data.profile.avatar,
+        username: data.profile.username ?? null,
         settings: data.settings as unknown as Json,
       }
     : { id: userId, settings: data.settings as unknown as Json };
