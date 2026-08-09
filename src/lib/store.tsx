@@ -443,7 +443,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               : pr,
           ),
         })),
-      toggleStage: (projectId, stageId) =>
+      refreshCollab,
+      toggleStage: (projectId, stageId) => {
+        const target = data.projects.find((p) => p.id === projectId);
+        if (target?.readOnly) {
+          // shared project: only the assigned member may tick, and only on the server
+          void toggleAssignedStage({ data: { projectId, stageId } })
+            .then(() => refreshCollab())
+            .catch((e: unknown) =>
+              toast.error(e instanceof Error ? e.message : "به‌روزرسانی مرحله ناموفق بود"),
+            );
+          return;
+        }
         patch((p) => ({
           ...p,
           projects: p.projects.map((pr) =>
@@ -457,7 +468,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 }
               : pr,
           ),
-        })),
+        }));
+      },
       createCategory: (name, color) =>
         patch((p) => ({
           ...p,
