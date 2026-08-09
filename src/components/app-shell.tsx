@@ -109,9 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="hidden min-w-0 items-center gap-2 sm:flex"
             aria-label={APP_NAME}
           >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <FolderKanban className="size-5" />
-            </span>
+            <FolderKanban className="size-8 shrink-0 text-primary" strokeWidth={1.8} />
             <span className="truncate text-sm font-bold md:text-base">{APP_NAME}</span>
           </Link>
 
