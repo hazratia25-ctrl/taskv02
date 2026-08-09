@@ -55,6 +55,8 @@ export const ACCESS_LABELS: Record<MemberAccess, string> = {
   MANAGE: "مدیریت",
 };
 
+export type MemberStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+
 export interface ProjectMember {
   id: string;
   name: string;
@@ -62,14 +64,21 @@ export interface ProjectMember {
   access?: MemberAccess;
   phone?: string;
   email?: string;
+  /** set when the member is a real signed-up account */
+  userId?: string | null;
+  userCode?: string | null;
+  username?: string | null;
+  avatar?: string | null;
+  status?: MemberStatus;
 }
-
 
 export interface ProjectStage {
   id: string;
   title: string;
   done: boolean;
   dueDate: string | null;
+  /** ProjectMember.id of the person responsible for this stage */
+  assigneeId?: string | null;
 }
 
 export interface Project {
@@ -86,6 +95,11 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  /** true when the project belongs to someone else and is shared with the current user */
+  readOnly?: boolean;
+  /** current user's ProjectMember.id inside a shared project */
+  myMemberId?: string | null;
+  sharedByName?: string | null;
 }
 
 export interface UserProfile {
