@@ -206,21 +206,21 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
   const projects: Row[] = data.projects
     .filter((p) => !p.readOnly)
     .map((p) => ({
-    user_id: userId,
-    id: p.id,
-    title: p.title,
-    description: p.description ?? "",
-    status: p.status,
-    priority: p.priority,
-    category_id: p.categoryId,
-    tag_ids: p.tagIds ?? [],
-    due_date: p.dueDate,
-    members: (p.members ?? []) as unknown as Json,
-    stages: (p.stages ?? []) as unknown as Json,
-    created_at: p.createdAt,
-    updated_at: p.updatedAt,
-    completed_at: p.completedAt,
-  }));
+      user_id: userId,
+      id: p.id,
+      title: p.title,
+      description: p.description ?? "",
+      status: p.status,
+      priority: p.priority,
+      category_id: p.categoryId,
+      tag_ids: p.tagIds ?? [],
+      due_date: p.dueDate,
+      members: (p.members ?? []) as unknown as Json,
+      stages: (p.stages ?? []) as unknown as Json,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt,
+      completed_at: p.completedAt,
+    }));
   const categories: Row[] = data.categories.map((c) => ({
     user_id: userId,
     id: c.id,
