@@ -556,7 +556,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       resetAll: () => setData(emptyData),
     };
-  }, [data, ready, patch]);
+  }, [data, ready, patch, refreshCollab]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
