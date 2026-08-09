@@ -82,6 +82,12 @@ export async function fetchSharedProjects(userId: string): Promise<Project[]> {
     .map((row) => mapProject(row, userId));
 }
 
+/** Owned projects, used to pick up stage ticks made by invited members. */
+export async function fetchOwnedProjects(userId: string): Promise<Project[]> {
+  const { data } = await supabase.from("projects").select("*").eq("user_id", userId);
+  return ((data ?? []) as ProjectRow[]).map((row) => mapProject(row, userId));
+}
+
 export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
   const [profileRes, tasksRes, projectsRes, catsRes, tagsRes, notifsRes, shared] =
     await Promise.all([
