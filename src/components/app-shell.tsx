@@ -168,9 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-3 pb-24 pt-4 md:px-6 lg:pb-8">
         <aside className="sticky top-28 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
           <div className="mb-4 flex items-center gap-2 px-2 pt-2">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <FolderKanban className="size-5" />
-            </span>
+            <FolderKanban className="size-7 shrink-0 text-primary" strokeWidth={1.8} />
             <p className="text-base font-bold leading-tight">{APP_NAME}</p>
           </div>
 
