@@ -93,6 +93,8 @@ interface StoreValue extends AppData {
   deleteProject: (id: string) => void;
   setProjectStatus: (id: string, status: TaskStatus) => void;
   toggleStage: (projectId: string, stageId: string) => void;
+  /** Re-pulls shared projects and owner-side stage updates from the cloud. */
+  refreshCollab: () => Promise<void>;
   createCategory: (name: string, color: string) => void;
   updateCategory: (id: string, patch: Partial<Pick<Category, "name" | "color">>) => void;
   deleteCategory: (id: string) => void;
