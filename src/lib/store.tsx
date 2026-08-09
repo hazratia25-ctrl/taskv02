@@ -293,6 +293,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const patch = useCallback((fn: (prev: AppData) => AppData) => setData(fn), []);
 
+  // pulls shared projects plus stage ticks made by invited members on owned projects
+  const refreshCollab = useCallback(async () => {
+    if (!user || !hydrated.current) return;
+    try {
+      const [shared, owned] = await Promise.all([
+        fetchSharedProjects(user.id),
+        fetchOwnedProjects(user.id),
+      ]);
+      setData((prev) => ({
+        ...prev,
+        projects: [
+          ...prev.projects
+            .filter((p) => !p.readOnly)
+            .map((p) => {
+              const remote = owned.find((o) => o.id === p.id);
+              // only remote stage state can change behind our back; keep local edits otherwise
+              return remote && remote.updatedAt > p.updatedAt ? { ...p, stages: remote.stages } : p;
+            }),
+          ...shared,
+        ],
+      }));
+    } catch {
+      /* offline: keep whatever we have */
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!ready || !user) return;
+    void refreshCollab();
+    const t = window.setInterval(() => void refreshCollab(), 45_000);
+    return () => window.clearInterval(t);
+  }, [ready, user, refreshCollab]);
+
+
   const value = useMemo<StoreValue>(() => {
     const now = () => new Date().toISOString();
 
