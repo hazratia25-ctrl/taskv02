@@ -15,6 +15,8 @@ import {
 import { useStore, uid } from "@/lib/store";
 import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
+import { projectPermissions } from "@/lib/access";
+
 import { ArrowRight, Plus, Trash2, Users, Search, UserPlus } from "lucide-react";
 import {
   searchAppUsers,
@@ -161,6 +163,23 @@ function MembersPage() {
       />
     );
   }
+
+  if (!projectPermissions(project).canManageMembers) {
+    return (
+      <EmptyState
+        title="دسترسی ندارید"
+        description="مدیریت اعضا فقط برای مالک پروژه یا عضو با دسترسی مدیریت فعال است."
+        action={
+          <Button asChild>
+            <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+              بازگشت به پروژه
+            </Link>
+          </Button>
+        }
+      />
+    );
+  }
+
 
   const members = project.members ?? [];
   const setMembers = (next: ProjectMember[]) => updateProject(project.id, { members: next });
