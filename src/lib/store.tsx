@@ -311,8 +311,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             .map((p) => {
               const remote = owned.find((o) => o.id === p.id);
               // only remote stage state can change behind our back; keep local edits otherwise
-              return remote && remote.updatedAt > p.updatedAt ? { ...p, stages: remote.stages } : p;
+              if (!remote || remote.updatedAt <= p.updatedAt) return p;
+              const status = deriveProjectStatus(remote.stages, p.status);
+              return {
+                ...p,
+                stages: remote.stages,
+                status,
+                completedAt:
+                  status === "COMPLETED" ? (p.completedAt ?? new Date().toISOString()) : null,
+              };
             }),
+
           ...shared,
         ],
       }));
