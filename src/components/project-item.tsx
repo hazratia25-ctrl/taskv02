@@ -14,9 +14,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Users, ListOrdered, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, Users, ListOrdered, AlertTriangle, UserRound } from "lucide-react";
 import { isOverdue, projectProgress, useStore } from "@/lib/store";
+import { projectPermissions } from "@/lib/access";
 import type { Project } from "@/lib/types";
+
 import { fa, formatJalali, relativeDue } from "@/lib/jalali";
 import { PriorityBadge, StatusBadge } from "./task-item";
 import { cn } from "@/lib/utils";
