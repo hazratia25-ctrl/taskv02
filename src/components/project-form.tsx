@@ -21,7 +21,9 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/lib/types";
+import { deriveProjectStatus } from "@/lib/access";
 import { JalaliDatePicker } from "./jalali-date-picker";
+
 import { Plus, Trash2, Users, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
@@ -103,10 +105,11 @@ export function ProjectFormBody({
     if (!title) return;
     setForm((f) => ({
       ...f,
-      stages: [...f.stages, { id: uid(), title, done: false, dueDate: null }],
+      stages: [...f.stages, { id: uid(), title, done: false, dueDate: null, assigneeId: null }],
     }));
     setStageTitle("");
   };
+
 
   const addTag = () => {
     const name = newTag.trim();
@@ -126,12 +129,23 @@ export function ProjectFormBody({
       setError("عنوان پروژه را وارد کنید.");
       return;
     }
+    // drop assignments pointing at removed members, then let the stages drive the status
+    const stages = form.stages.map((st) => ({
+      ...st,
+      assigneeId: form.members.some((m) => m.id === st.assigneeId) ? st.assigneeId : null,
+    }));
+    const payload = {
+      ...form,
+      title: form.title.trim(),
+      stages,
+      status: deriveProjectStatus(stages, form.status),
+    };
     try {
       if (project) {
-        updateProject(project.id, { ...form, title: form.title.trim() });
+        updateProject(project.id, payload);
         toast.success("پروژه به‌روزرسانی شد");
       } else {
-        createProject({ ...form, title: form.title.trim() });
+        createProject(payload);
         toast.success("پروژه ایجاد شد");
       }
       onDone();
@@ -139,6 +153,7 @@ export function ProjectFormBody({
       toast.error("ذخیره‌سازی ناموفق بود");
     }
   };
+
 
   return (
     <form className="space-y-4" onSubmit={submit}>
@@ -362,9 +377,7 @@ export function ProjectFormBody({
                   }
                   aria-label="تکمیل مرحله"
                 />
-                <span className="text-sm font-medium">
-                  مرحله {i + 1}: {st.title}
-                </span>
+                <span className="text-sm font-medium">مرحله {i + 1}</span>
                 <Button
                   type="button"
                   size="icon"
@@ -377,6 +390,51 @@ export function ProjectFormBody({
                 >
                   <Trash2 className="size-4" />
                 </Button>
+              </div>
+              <Input
+                value={st.title}
+                aria-label="عنوان مرحله"
+                placeholder="عنوان مرحله"
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    stages: f.stages.map((x) =>
+                      x.id === st.id ? { ...x, title: e.target.value } : x,
+                    ),
+                  }))
+                }
+              />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">مسئول این مرحله</Label>
+                <Select
+                  value={st.assigneeId ?? NONE}
+                  onValueChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      stages: f.stages.map((x) =>
+                        x.id === st.id ? { ...x, assigneeId: v === NONE ? null : v } : x,
+                      ),
+                    }))
+                  }
+                >
+                  <SelectTrigger aria-label="مسئول مرحله">
+                    <SelectValue placeholder="بدون مسئول" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>بدون مسئول</SelectItem>
+                    {form.members.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name || "بدون نام"}
+                        {m.role ? ` | ${m.role}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.members.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    ابتدا عضو اضافه کنید تا بتوانید مرحله را به او اختصاص دهید.
+                  </p>
+                )}
               </div>
               <JalaliDatePicker
                 value={st.dueDate}
@@ -393,6 +451,7 @@ export function ProjectFormBody({
             <p className="text-xs text-muted-foreground">مرحله‌ای تعریف نشده است.</p>
           )}
         </div>
+
         <div className="flex gap-2">
           <Input
             value={stageTitle}

@@ -25,6 +25,8 @@ import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
 import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects } from "./cloud";
 import { toggleAssignedStage } from "./collab.functions";
+import { deriveProjectStatus } from "./access";
+
 import { toast } from "sonner";
 
 const STORAGE_PREFIX = "task-manager-offline-v1";
@@ -309,8 +311,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             .map((p) => {
               const remote = owned.find((o) => o.id === p.id);
               // only remote stage state can change behind our back; keep local edits otherwise
-              return remote && remote.updatedAt > p.updatedAt ? { ...p, stages: remote.stages } : p;
+              if (!remote || remote.updatedAt <= p.updatedAt) return p;
+              const status = deriveProjectStatus(remote.stages, p.status);
+              return {
+                ...p,
+                stages: remote.stages,
+                status,
+                completedAt:
+                  status === "COMPLETED" ? (p.completedAt ?? new Date().toISOString()) : null,
+              };
             }),
+
           ...shared,
         ],
       }));
@@ -457,19 +468,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
         patch((p) => ({
           ...p,
-          projects: p.projects.map((pr) =>
-            pr.id === projectId
-              ? {
-                  ...pr,
-                  updatedAt: now(),
-                  stages: pr.stages.map((st) =>
-                    st.id === stageId ? { ...st, done: !st.done } : st,
-                  ),
-                }
-              : pr,
-          ),
+          projects: p.projects.map((pr) => {
+            if (pr.id !== projectId) return pr;
+            const stages = pr.stages.map((st) =>
+              st.id === stageId ? { ...st, done: !st.done } : st,
+            );
+            const status = deriveProjectStatus(stages, pr.status);
+            return {
+              ...pr,
+              stages,
+              status,
+              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
+              updatedAt: now(),
+            };
+          }),
         }));
       },
+
       createCategory: (name, color) =>
         patch((p) => ({
           ...p,

@@ -1,15 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { PageHeader, EmptyState } from "@/components/app-shell";
-import { TaskDialog } from "@/components/task-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { projectProgress, useStore } from "@/lib/store";
 import { fa, formatJalali } from "@/lib/jalali";
-import type { Task } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
-import { Plus, FolderKanban, Users, ListChecks, Clock } from "lucide-react";
+import { FolderKanban, Users, ListChecks, Clock, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,8 +30,6 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const { tasks, projects } = useStore();
-  const [open, setOpen] = useState(false);
-  const [editing] = useState<Task | null>(null);
 
   const recentTasks = useMemo(
     () => [...tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4),
@@ -41,15 +38,8 @@ function Dashboard() {
 
   return (
     <div className="space-y-7">
-      <PageHeader
-        title="داشبورد"
-        description="نمای کلی وضعیت وظایف و پروژه‌ها"
-        action={
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="size-4" /> ایجاد وظیفه یا پروژه
-          </Button>
-        }
-      />
+      <PageHeader title="داشبورد" description="نمای کلی وضعیت وظایف و پروژه‌ها" />
+
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -62,7 +52,7 @@ function Dashboard() {
         </div>
         {projects.length === 0 ? (
           <div className="surface p-4 text-sm text-muted-foreground">
-            هنوز پروژه‌ای ندارید. با دکمه بالا و انتخاب «پروژه» اولین پروژه را بسازید.
+            هنوز پروژه‌ای ندارید. از صفحه پروژه‌ها اولین پروژه را بسازید.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -86,7 +76,14 @@ function Dashboard() {
                   <span className="flex items-center gap-1">
                     <Users className="size-3.5" /> {fa((pr.members ?? []).length)} عضو
                   </span>
+                  {pr.dueDate && (
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="size-3.5" /> مهلت کلی:{" "}
+                      {formatJalali(pr.dueDate, true)}
+                    </span>
+                  )}
                 </div>
+
               </Link>
             ))}
           </div>
@@ -105,10 +102,10 @@ function Dashboard() {
         {tasks.length === 0 ? (
           <EmptyState
             title="هنوز وظیفه‌ای ایجاد نکرده‌اید"
-            description="اولین وظیفه خود را بسازید تا داشبورد، تقویم و آمار پر شوند."
+            description="از صفحه وظایف اولین وظیفه خود را بسازید تا داشبورد، تقویم و آمار پر شوند."
             action={
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="size-4" /> ایجاد اولین مورد
+              <Button asChild>
+                <Link to="/tasks">رفتن به وظایف</Link>
               </Button>
             }
           />
@@ -139,7 +136,6 @@ function Dashboard() {
         )}
       </section>
 
-      <TaskDialog open={open} onOpenChange={setOpen} task={editing} />
     </div>
   );
 }

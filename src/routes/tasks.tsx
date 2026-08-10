@@ -167,7 +167,21 @@ function TasksPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="وظایف" description="جست‌وجو، فیلتر و مرتب‌سازی" />
+      <PageHeader
+        title="وظایف"
+        description="جست‌وجو، فیلتر و مرتب‌سازی"
+        action={
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="size-4" /> ایجاد وظیفه
+          </Button>
+        }
+      />
+
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[

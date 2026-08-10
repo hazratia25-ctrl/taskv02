@@ -58,17 +58,32 @@ function CalendarPage() {
     (d: Date) => tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), d)),
     [tasks],
   );
+  /**
+   * A project shows up on a stage's date when that stage has one, and only that stage is listed.
+   * Projects whose stages have no dates fall back to the overall project deadline.
+   */
   const projectsForDay = useCallback(
-    (d: Date) =>
-      projects.filter(
-        (p) =>
-          (p.dueDate && isSameDay(new Date(p.dueDate), d)) ||
-          (p.stages ?? []).some((st) => st.dueDate && isSameDay(new Date(st.dueDate), d)),
-      ),
+    (d: Date) => {
+      const out: { project: Project; stageIds: string[] | undefined }[] = [];
+      for (const p of projects) {
+        const stages = p.stages ?? [];
+        const matching = stages.filter((st) => st.dueDate && isSameDay(new Date(st.dueDate), d));
+        if (matching.length > 0) {
+          out.push({ project: p, stageIds: matching.map((st) => st.id) });
+          continue;
+        }
+        if (p.dueDate && isSameDay(new Date(p.dueDate), d)) {
+          const undated = stages.filter((st) => !st.dueDate).map((st) => st.id);
+          out.push({ project: p, stageIds: stages.length ? undated : undefined });
+        }
+      }
+      return out;
+    },
     [projects],
   );
   const dayTasks = useMemo(() => tasksForDay(selected), [tasksForDay, selected]);
   const dayProjects = useMemo(() => projectsForDay(selected), [projectsForDay, selected]);
+
 
 
   return (
@@ -108,10 +123,11 @@ function CalendarPage() {
             selected={selected}
             onSelect={setSelected}
             renderBadge={(d) => {
-              const items = [...tasksForDay(d), ...projectsForDay(d)];
+              const items = [...tasksForDay(d), ...projectsForDay(d).map((x) => x.project)];
               if (items.length === 0) return null;
               const hasOverdue = items.some(isOverdue);
               const allDone = items.every((t) => t.status === "COMPLETED");
+
               return (
                 <span
                   className="mt-0.5 size-1.5 rounded-full"
@@ -159,16 +175,18 @@ function CalendarPage() {
                   }}
                 />
               ))}
-              {dayProjects.map((pr) => (
+              {dayProjects.map(({ project: pr, stageIds }) => (
                 <ProjectItem
                   key={pr.id}
                   project={pr}
+                  onlyStageIds={stageIds}
                   onEdit={(proj) => {
                     setEditingProject(proj);
                     setProjectOpen(true);
                   }}
                 />
               ))}
+
             </>
           )}
         </div>

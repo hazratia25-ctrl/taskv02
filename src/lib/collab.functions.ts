@@ -247,7 +247,7 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: project, error } = await supabaseAdmin
       .from("projects")
-      .select("title, members, stages")
+      .select("title, members, stages, status, completed_at")
       .eq("id", data.projectId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -263,14 +263,20 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
     }
 
     const nextStages = stages.map((s) => (s.id === data.stageId ? { ...s, done: !s.done } : s));
+    const { deriveProjectStatus } = await import("./access");
+    const nextStatus = deriveProjectStatus(nextStages, project.status as never);
     const { error: updateError } = await supabaseAdmin
       .from("projects")
       .update({
         stages: nextStages as unknown as never,
+        status: nextStatus,
+        completed_at:
+          nextStatus === "COMPLETED" ? (project.completed_at ?? new Date().toISOString()) : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.projectId);
     if (updateError) throw new Error(updateError.message);
+
 
     const myName = members.find((m) => m.userId === userId)?.name ?? "عضو تیم";
     await notify(membership.owner_id, {
