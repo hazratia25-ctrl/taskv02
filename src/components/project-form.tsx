@@ -362,9 +362,7 @@ export function ProjectFormBody({
                   }
                   aria-label="تکمیل مرحله"
                 />
-                <span className="text-sm font-medium">
-                  مرحله {i + 1}: {st.title}
-                </span>
+                <span className="text-sm font-medium">مرحله {i + 1}</span>
                 <Button
                   type="button"
                   size="icon"
@@ -377,6 +375,51 @@ export function ProjectFormBody({
                 >
                   <Trash2 className="size-4" />
                 </Button>
+              </div>
+              <Input
+                value={st.title}
+                aria-label="عنوان مرحله"
+                placeholder="عنوان مرحله"
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    stages: f.stages.map((x) =>
+                      x.id === st.id ? { ...x, title: e.target.value } : x,
+                    ),
+                  }))
+                }
+              />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">مسئول این مرحله</Label>
+                <Select
+                  value={st.assigneeId ?? NONE}
+                  onValueChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      stages: f.stages.map((x) =>
+                        x.id === st.id ? { ...x, assigneeId: v === NONE ? null : v } : x,
+                      ),
+                    }))
+                  }
+                >
+                  <SelectTrigger aria-label="مسئول مرحله">
+                    <SelectValue placeholder="بدون مسئول" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>بدون مسئول</SelectItem>
+                    {form.members.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name || "بدون نام"}
+                        {m.role ? ` | ${m.role}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.members.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    ابتدا عضو اضافه کنید تا بتوانید مرحله را به او اختصاص دهید.
+                  </p>
+                )}
               </div>
               <JalaliDatePicker
                 value={st.dueDate}
@@ -393,6 +436,7 @@ export function ProjectFormBody({
             <p className="text-xs text-muted-foreground">مرحله‌ای تعریف نشده است.</p>
           )}
         </div>
+
         <div className="flex gap-2">
           <Input
             value={stageTitle}
