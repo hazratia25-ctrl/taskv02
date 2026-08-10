@@ -6,7 +6,9 @@ import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 import { formatJalali } from "@/lib/jalali";
-import type { Project } from "@/lib/types";
+import { ACCESS_LABELS, type Project } from "@/lib/types";
+import { projectPermissions } from "@/lib/access";
+
 import { ArrowRight, Users } from "lucide-react";
 
 export const Route = createFileRoute("/projects_/$projectId")({
@@ -42,6 +44,8 @@ function ProjectDetailPage() {
     );
   }
 
+  const perms = projectPermissions(project);
+
   const edit = (p: Project) => {
     void p;
     setOpen(true);
@@ -51,20 +55,27 @@ function ProjectDetailPage() {
     <div className="space-y-5">
       <PageHeader
         title={project.title}
-        description={`ایجاد: ${formatJalali(project.createdAt, true)}`}
+        description={
+          perms.isOwner
+            ? `ایجاد: ${formatJalali(project.createdAt, true)}`
+            : `پروژه اشتراکی — دسترسی: ${ACCESS_LABELS[perms.access]}`
+        }
         action={
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/projects/$projectId/members" params={{ projectId: project.id }}>
-                <Users className="size-4" /> مدیریت اعضا
-              </Link>
-            </Button>
+            {perms.canManageMembers && (
+              <Button asChild variant="outline">
+                <Link to="/projects/$projectId/members" params={{ projectId: project.id }}>
+                  <Users className="size-4" /> مدیریت اعضا
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" onClick={() => navigate({ to: "/projects" })}>
               <ArrowRight className="size-4" /> همه پروژه‌ها
             </Button>
           </div>
         }
       />
+
       <ProjectItem project={project} onEdit={edit} />
       <ProjectDialog open={open} onOpenChange={setOpen} project={project} />
     </div>
