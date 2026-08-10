@@ -47,9 +47,12 @@ export function ProjectMembers({ project }: { project: Project }) {
 export function ProjectItem({
   project,
   onEdit,
+  onlyStageIds,
 }: {
   project: Project;
   onEdit: (p: Project) => void;
+  /** when set, only these stages are listed (used by the calendar day view) */
+  onlyStageIds?: string[];
 }) {
   const { categories, toggleStage, deleteProject } = useStore();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -57,6 +60,12 @@ export function ProjectItem({
   const overdue = isOverdue(project);
   const progress = projectProgress(project);
   const doneStages = project.stages?.filter((s) => s.done).length ?? 0;
+  const perms = projectPermissions(project);
+  const stages = (project.stages ?? []).filter(
+    (st) => !onlyStageIds || onlyStageIds.includes(st.id),
+  );
+  const memberName = (id?: string | null) =>
+    (project.members ?? []).find((m) => m.id === id)?.name ?? null;
 
   return (
     <article className={cn("surface lift p-4", project.status === "COMPLETED" && "opacity-80")}>
@@ -77,18 +86,22 @@ export function ProjectItem({
           )}
         </div>
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" aria-label="ویرایش" onClick={() => onEdit(project)}>
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-destructive"
-            aria-label="حذف پروژه"
-            onClick={() => setConfirmOpen(true)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          {perms.canEditProject && (
+            <Button size="icon" variant="ghost" aria-label="ویرایش" onClick={() => onEdit(project)}>
+              <Pencil className="size-4" />
+            </Button>
+          )}
+          {perms.canDeleteProject && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-destructive"
+              aria-label="حذف پروژه"
+              onClick={() => setConfirmOpen(true)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -98,6 +111,11 @@ export function ProjectItem({
         <Badge variant="outline" className="border-transparent bg-primary/10 text-primary">
           پروژه
         </Badge>
+        {project.readOnly && (
+          <Badge variant="outline" className="border-transparent bg-muted text-muted-foreground">
+            مهمان{project.sharedByName ? ` · ${project.sharedByName}` : ""}
+          </Badge>
+        )}
         {category && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <span className="size-2 rounded-full" style={{ backgroundColor: category.color }} />
@@ -128,27 +146,41 @@ export function ProjectItem({
         <Progress value={progress} />
       </div>
 
-      {project.stages?.length > 0 && (
+      {stages.length > 0 && (
         <div className="mt-3 space-y-1.5">
-          {project.stages.map((st, i) => (
-            <div key={st.id} className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2">
-              <Checkbox
-                checked={st.done}
-                onCheckedChange={() => toggleStage(project.id, st.id)}
-                aria-label="تکمیل مرحله"
-              />
-              <span className={cn("text-sm", st.done && "text-muted-foreground line-through")}>
-                مرحله {fa(i + 1)}: {st.title}
-              </span>
-              {st.dueDate && (
-                <span className="ms-auto text-[11px] text-muted-foreground">
-                  {formatJalali(st.dueDate)}
+          {stages.map((st) => {
+            const index = (project.stages ?? []).findIndex((x) => x.id === st.id);
+            const assignee = memberName(st.assigneeId);
+            const allowed = perms.canToggleStage(st);
+            return (
+              <div
+                key={st.id}
+                className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 px-3 py-2"
+              >
+                <Checkbox
+                  checked={st.done}
+                  disabled={!allowed}
+                  onCheckedChange={() => toggleStage(project.id, st.id)}
+                  aria-label="تکمیل مرحله"
+                />
+                <span className={cn("text-sm", st.done && "text-muted-foreground line-through")}>
+                  مرحله {fa(index + 1)}: {st.title}
                 </span>
-              )}
-            </div>
-          ))}
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <UserRound className="size-3.5" />
+                  {assignee ?? "بدون مسئول"}
+                </span>
+                {st.dueDate && (
+                  <span className="ms-auto text-[11px] text-muted-foreground">
+                    {formatJalali(st.dueDate)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+
 
       <div className="mt-4 space-y-2">
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
