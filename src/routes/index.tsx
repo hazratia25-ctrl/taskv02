@@ -52,7 +52,7 @@ function Dashboard() {
         </div>
         {projects.length === 0 ? (
           <div className="surface p-4 text-sm text-muted-foreground">
-            هنوز پروژه‌ای ندارید. با دکمه بالا و انتخاب «پروژه» اولین پروژه را بسازید.
+            هنوز پروژه‌ای ندارید. از صفحه پروژه‌ها اولین پروژه را بسازید.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
