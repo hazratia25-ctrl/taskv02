@@ -76,7 +76,14 @@ function Dashboard() {
                   <span className="flex items-center gap-1">
                     <Users className="size-3.5" /> {fa((pr.members ?? []).length)} عضو
                   </span>
+                  {pr.dueDate && (
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="size-3.5" /> مهلت کلی:{" "}
+                      {formatJalali(pr.dueDate, true)}
+                    </span>
+                  )}
                 </div>
+
               </Link>
             ))}
           </div>
@@ -95,10 +102,10 @@ function Dashboard() {
         {tasks.length === 0 ? (
           <EmptyState
             title="هنوز وظیفه‌ای ایجاد نکرده‌اید"
-            description="اولین وظیفه خود را بسازید تا داشبورد، تقویم و آمار پر شوند."
+            description="از صفحه وظایف اولین وظیفه خود را بسازید تا داشبورد، تقویم و آمار پر شوند."
             action={
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="size-4" /> ایجاد اولین مورد
+              <Button asChild>
+                <Link to="/tasks">رفتن به وظایف</Link>
               </Button>
             }
           />
@@ -129,7 +136,6 @@ function Dashboard() {
         )}
       </section>
 
-      <TaskDialog open={open} onOpenChange={setOpen} task={editing} />
     </div>
   );
 }
