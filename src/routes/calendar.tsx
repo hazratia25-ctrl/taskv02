@@ -58,17 +58,32 @@ function CalendarPage() {
     (d: Date) => tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), d)),
     [tasks],
   );
+  /**
+   * A project shows up on a stage's date when that stage has one, and only that stage is listed.
+   * Projects whose stages have no dates fall back to the overall project deadline.
+   */
   const projectsForDay = useCallback(
-    (d: Date) =>
-      projects.filter(
-        (p) =>
-          (p.dueDate && isSameDay(new Date(p.dueDate), d)) ||
-          (p.stages ?? []).some((st) => st.dueDate && isSameDay(new Date(st.dueDate), d)),
-      ),
+    (d: Date) => {
+      const out: { project: Project; stageIds: string[] | undefined }[] = [];
+      for (const p of projects) {
+        const stages = p.stages ?? [];
+        const matching = stages.filter((st) => st.dueDate && isSameDay(new Date(st.dueDate), d));
+        if (matching.length > 0) {
+          out.push({ project: p, stageIds: matching.map((st) => st.id) });
+          continue;
+        }
+        if (p.dueDate && isSameDay(new Date(p.dueDate), d)) {
+          const undated = stages.filter((st) => !st.dueDate).map((st) => st.id);
+          out.push({ project: p, stageIds: stages.length ? undated : undefined });
+        }
+      }
+      return out;
+    },
     [projects],
   );
   const dayTasks = useMemo(() => tasksForDay(selected), [tasksForDay, selected]);
   const dayProjects = useMemo(() => projectsForDay(selected), [projectsForDay, selected]);
+
 
 
   return (
