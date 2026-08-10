@@ -123,10 +123,11 @@ function CalendarPage() {
             selected={selected}
             onSelect={setSelected}
             renderBadge={(d) => {
-              const items = [...tasksForDay(d), ...projectsForDay(d)];
+              const items = [...tasksForDay(d), ...projectsForDay(d).map((x) => x.project)];
               if (items.length === 0) return null;
               const hasOverdue = items.some(isOverdue);
               const allDone = items.every((t) => t.status === "COMPLETED");
+
               return (
                 <span
                   className="mt-0.5 size-1.5 rounded-full"
@@ -174,16 +175,18 @@ function CalendarPage() {
                   }}
                 />
               ))}
-              {dayProjects.map((pr) => (
+              {dayProjects.map(({ project: pr, stageIds }) => (
                 <ProjectItem
                   key={pr.id}
                   project={pr}
+                  onlyStageIds={stageIds}
                   onEdit={(proj) => {
                     setEditingProject(proj);
                     setProjectOpen(true);
                   }}
                 />
               ))}
+
             </>
           )}
         </div>
