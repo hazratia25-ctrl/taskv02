@@ -21,7 +21,9 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/lib/types";
+import { deriveProjectStatus } from "@/lib/access";
 import { JalaliDatePicker } from "./jalali-date-picker";
+
 import { Plus, Trash2, Users, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
@@ -103,10 +105,11 @@ export function ProjectFormBody({
     if (!title) return;
     setForm((f) => ({
       ...f,
-      stages: [...f.stages, { id: uid(), title, done: false, dueDate: null }],
+      stages: [...f.stages, { id: uid(), title, done: false, dueDate: null, assigneeId: null }],
     }));
     setStageTitle("");
   };
+
 
   const addTag = () => {
     const name = newTag.trim();
@@ -126,12 +129,23 @@ export function ProjectFormBody({
       setError("عنوان پروژه را وارد کنید.");
       return;
     }
+    // drop assignments pointing at removed members, then let the stages drive the status
+    const stages = form.stages.map((st) => ({
+      ...st,
+      assigneeId: form.members.some((m) => m.id === st.assigneeId) ? st.assigneeId : null,
+    }));
+    const payload = {
+      ...form,
+      title: form.title.trim(),
+      stages,
+      status: deriveProjectStatus(stages, form.status),
+    };
     try {
       if (project) {
-        updateProject(project.id, { ...form, title: form.title.trim() });
+        updateProject(project.id, payload);
         toast.success("پروژه به‌روزرسانی شد");
       } else {
-        createProject({ ...form, title: form.title.trim() });
+        createProject(payload);
         toast.success("پروژه ایجاد شد");
       }
       onDone();
@@ -139,6 +153,7 @@ export function ProjectFormBody({
       toast.error("ذخیره‌سازی ناموفق بود");
     }
   };
+
 
   return (
     <form className="space-y-4" onSubmit={submit}>
