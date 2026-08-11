@@ -28,7 +28,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowRight, Plus, Trash2, Users, Search, Pencil, Check, X } from "lucide-react";
-import { inviteProjectMember, type FoundUser } from "@/lib/collab.functions";
+import {
+  inviteProjectMember,
+  removeProjectMember,
+  type FoundUser,
+} from "@/lib/collab.functions";
 import { MemberSearch } from "@/components/member-search";
 import { MemberAvatar } from "@/components/project-item";
 import { toast } from "sonner";
@@ -404,7 +408,19 @@ function MembersPage() {
                 member={m}
                 onSave={(patch) => patchMember(m.id, patch)}
                 onRemove={() => {
-                  setMembers(members.filter((x) => x.id !== m.id));
+                  updateProject(project.id, {
+                    members: members.filter((x) => x.id !== m.id),
+                    stages: (project.stages ?? []).map((st) =>
+                      st.assigneeId === m.id ? { ...st, assigneeId: null } : st,
+                    ),
+                  });
+                  if (m.userId) {
+                    void removeProjectMember({
+                      data: { projectId: project.id, memberUserId: m.userId },
+                    }).catch(() => {
+                      /* membership row cleanup is best-effort */
+                    });
+                  }
                   toast.success("عضو حذف شد");
                 }}
               />
