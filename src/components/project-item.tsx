@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pencil, Trash2, Users, ListOrdered, AlertTriangle, UserRound } from "lucide-react";
 import { isOverdue, projectProgress, useStore } from "@/lib/store";
 import { projectPermissions } from "@/lib/access";
@@ -23,6 +24,26 @@ import { fa, formatJalali, relativeDue } from "@/lib/jalali";
 import { PriorityBadge, StatusBadge } from "./task-item";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+/** Shows the real account picture when the member is a signed-up user. */
+export function MemberAvatar({
+  name,
+  avatar,
+  className,
+}: {
+  name?: string | null;
+  avatar?: string | null;
+  className?: string;
+}) {
+  return (
+    <Avatar className={cn("size-7 rounded-md", className)}>
+      {avatar ? <AvatarImage src={avatar} alt={name ?? ""} /> : null}
+      <AvatarFallback className="rounded-md bg-primary/15 text-[10px] font-bold text-primary">
+        {(name ?? "؟").slice(0, 2)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export function ProjectMembers({ project }: { project: Project }) {
   if (!project.members?.length) {
@@ -35,9 +56,7 @@ export function ProjectMembers({ project }: { project: Project }) {
           key={m.id}
           className="flex items-center gap-2 rounded-full border bg-muted/60 px-3 py-1 text-xs"
         >
-          <span className="flex size-6 items-center justify-center rounded-md bg-primary/15 text-[10px] font-bold text-primary">
-            {m.name.slice(0, 2)}
-          </span>
+          <MemberAvatar name={m.name} avatar={m.avatar} className="size-6" />
           <span className="font-medium">{m.name}</span>
           <span className="text-muted-foreground">| {m.role}</span>
         </span>
@@ -148,6 +167,13 @@ export function ProjectItem({
         <Progress value={progress} />
       </div>
 
+      {project.readOnly && (
+        <p className="mt-3 rounded-xl bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground">
+          دسترسی شما در این پروژه محدود است: تنها می‌توانید مرحله‌ای را که به شما سپرده شده تیک بزنید؛
+          ویرایش پروژه و سایر مراحل «دسترسی ندارید».
+        </p>
+      )}
+
       {stages.length > 0 && (
         <div className="mt-3 space-y-1.5">
           {stages.map((st) => {
@@ -169,7 +195,15 @@ export function ProjectItem({
                   مرحله {fa(index + 1)}: {st.title}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <UserRound className="size-3.5" />
+                  {assignee ? (
+                    <MemberAvatar
+                      name={assignee}
+                      avatar={(project.members ?? []).find((m) => m.id === st.assigneeId)?.avatar}
+                      className="size-5"
+                    />
+                  ) : (
+                    <UserRound className="size-3.5" />
+                  )}
                   {assignee ?? "بدون مسئول"}
                 </span>
                 {st.dueDate && (

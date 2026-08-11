@@ -17,12 +17,24 @@ import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
 import { projectPermissions } from "@/lib/access";
 
-import { ArrowRight, Plus, Trash2, Users, Search, UserPlus } from "lucide-react";
 import {
-  searchAppUsers,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ArrowRight, Plus, Trash2, Users, Search, Pencil, Check, X } from "lucide-react";
+import {
   inviteProjectMember,
+  removeProjectMember,
   type FoundUser,
 } from "@/lib/collab.functions";
+import { MemberSearch } from "@/components/member-search";
+import { MemberAvatar } from "@/components/project-item";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projects_/$projectId_/members")({
@@ -52,46 +64,37 @@ function InviteRealUser({
   members: ProjectMember[];
   setMembers: (next: ProjectMember[]) => void;
 }) {
-  const [q, setQ] = useState("");
   const [role, setRole] = useState("");
-  const [results, setResults] = useState<FoundUser[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const search = async () => {
-    setBusy(true);
-    try {
-      const found = await searchAppUsers({ data: { q } });
-      setResults(found);
-      if (found.length === 0) toast.error("کاربری با این شناسه پیدا نشد.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "جست‌وجو ناموفق بود");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const invite = async (u: FoundUser) => {
+    if (members.some((m) => m.userId === u.id)) {
+      toast.error("این کاربر قبلاً عضو پروژه است.");
+      return;
+    }
     setBusy(true);
     try {
-      await inviteProjectMember({ data: { projectId: project.id, memberUserId: u.id, role } });
-      if (!members.some((m) => m.userId === u.id)) {
-        setMembers([
-          ...members,
-          {
-            id: uid(),
-            name: u.name || u.userCode,
-            role: role.trim(),
-            access: "VIEW",
-            userId: u.id,
-            userCode: u.userCode,
-            avatar: u.avatar,
-            status: "PENDING",
-          },
-        ]);
-      }
+      await inviteProjectMember({
+        data: { projectId: project.id, memberUserId: u.id, role: role.trim() || u.role },
+      });
+      setMembers([
+        ...members,
+        {
+          id: uid(),
+          name: u.name || u.userCode,
+          role: role.trim() || u.role || "عضو تیم",
+          access: "VIEW",
+          phone: u.phone,
+          extension: u.extension,
+          email: u.email,
+          userId: u.id,
+          userCode: u.userCode,
+          username: u.username,
+          avatar: u.avatar,
+          status: "PENDING",
+        },
+      ]);
       toast.success("دعوت ارسال شد؛ پس از پذیرش، دسترسی فعال می‌شود.");
-      setResults([]);
-      setQ("");
       setRole("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "ارسال دعوت ناموفق بود");
@@ -108,35 +111,150 @@ function InviteRealUser({
       <p className="text-xs text-muted-foreground">
         شناسه کاربری (مثل TM-4F9K2)، نام کاربری یا ایمیل عضو را وارد کنید.
       </p>
-      <div className="grid gap-3 md:grid-cols-3">
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="TM-… یا نام کاربری یا ایمیل"
-        />
-        <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="نقش در پروژه" />
-        <Button disabled={busy || q.trim().length < 3} onClick={search}>
-          <Search className="size-4" /> جست‌وجو
-        </Button>
-      </div>
-      {results.length > 0 && (
-        <div className="grid gap-2">
-          {results.map((u) => (
-            <div key={u.id} className="flex items-center justify-between gap-2 rounded-xl border p-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{u.name || u.userCode}</p>
-                <p className="truncate text-xs text-muted-foreground" dir="ltr">
-                  {u.userCode}
-                  {u.username ? ` · ${u.username}` : ""}
-                </p>
-              </div>
-              <Button size="sm" disabled={busy} onClick={() => invite(u)}>
-                <UserPlus className="size-4" /> دعوت
-              </Button>
-            </div>
-          ))}
+      <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="نقش در پروژه" />
+      <MemberSearch onPick={invite} addLabel="دعوت و افزودن" busy={busy} />
+    </div>
+  );
+}
+
+/** One member row: read-only until «ویرایش», then confirm or cancel the change. */
+function MemberRow({
+  member,
+  onSave,
+  onRemove,
+}: {
+  member: ProjectMember;
+  onSave: (patch: Partial<ProjectMember>) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<ProjectMember>(member);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const start = () => {
+    setDraft(member);
+    setEditing(true);
+  };
+
+  return (
+    <div className="surface space-y-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <MemberAvatar name={member.name} avatar={member.avatar} className="size-9" />
+          <span className="min-w-0">
+            <span className="block truncate">{member.name || "بدون نام"}</span>
+            <span className="block truncate text-[11px] font-normal text-muted-foreground" dir="ltr">
+              {[member.userCode, member.username, member.phone].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+        </span>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{ACCESS_LABELS[member.access ?? "VIEW"]}</Badge>
+          {member.status === "PENDING" && <Badge variant="outline">در انتظار پذیرش</Badge>}
+          {!editing && (
+            <Button size="icon" variant="ghost" aria-label="ویرایش عضو" onClick={start}>
+              <Pencil className="size-4" />
+            </Button>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-destructive"
+            aria-label="حذف عضو"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
         </div>
+      </div>
+
+      {editing && (
+        <>
+          <div className="grid gap-3 md:grid-cols-4">
+            <Input
+              value={draft.name}
+              aria-label="نام عضو"
+              placeholder="نام عضو"
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+            <Input
+              value={draft.role}
+              aria-label="نقش عضو"
+              placeholder="نقش"
+              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
+            />
+            <Input
+              dir="ltr"
+              value={draft.phone ?? ""}
+              aria-label="شماره تماس عضو"
+              placeholder="شماره تماس"
+              onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+            />
+            <Select
+              value={draft.access ?? "VIEW"}
+              onValueChange={(v) => setDraft({ ...draft, access: v as MemberAccess })}
+            >
+              <SelectTrigger aria-label="سطح دسترسی عضو">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCESS_VALUES.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {ACCESS_LABELS[a]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                onSave({
+                  name: draft.name,
+                  role: draft.role,
+                  phone: draft.phone,
+                  access: draft.access,
+                });
+                setEditing(false);
+                toast.success("تغییرات عضو ذخیره شد");
+              }}
+            >
+              <Check className="size-4" /> تایید تغییرات
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                setDraft(member);
+                setEditing(false);
+              }}
+            >
+              <X className="size-4" /> انصراف
+            </Button>
+          </div>
+        </>
       )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader className="text-start">
+            <AlertDialogTitle>حذف عضو از پروژه؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              «{member.name || "این عضو"}» از پروژه و از مراحل اختصاص‌یافته حذف می‌شود.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:justify-start">
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={onRemove}
+            >
+              حذف عضو
+            </AlertDialogAction>
+            <AlertDialogCancel>انصراف</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -285,67 +403,27 @@ function MembersPage() {
         ) : (
           <div className="grid gap-3">
             {members.map((m) => (
-              <div key={m.id} className="surface space-y-3 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 text-sm font-semibold">
-                    <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15 text-xs font-bold text-primary">
-                      {m.name.slice(0, 2)}
-                    </span>
-                    {m.name || "بدون نام"}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{ACCESS_LABELS[m.access ?? "VIEW"]}</Badge>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive"
-                      aria-label="حذف عضو"
-                      onClick={() => {
-                        setMembers(members.filter((x) => x.id !== m.id));
-                        toast.success("عضو حذف شد");
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid gap-3 md:grid-cols-4">
-                  <Input
-                    value={m.name}
-                    aria-label="نام عضو"
-                    placeholder="نام عضو"
-                    onChange={(e) => patchMember(m.id, { name: e.target.value })}
-                  />
-                  <Input
-                    value={m.role}
-                    aria-label="نقش عضو"
-                    placeholder="نقش"
-                    onChange={(e) => patchMember(m.id, { role: e.target.value })}
-                  />
-                  <Input
-                    dir="ltr"
-                    value={m.phone ?? ""}
-                    aria-label="شماره تماس عضو"
-                    placeholder="شماره تماس"
-                    onChange={(e) => patchMember(m.id, { phone: e.target.value })}
-                  />
-                  <Select
-                    value={m.access ?? "VIEW"}
-                    onValueChange={(v) => patchMember(m.id, { access: v as MemberAccess })}
-                  >
-                    <SelectTrigger aria-label="سطح دسترسی عضو">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACCESS_VALUES.map((a) => (
-                        <SelectItem key={a} value={a}>
-                          {ACCESS_LABELS[a]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <MemberRow
+                key={m.id}
+                member={m}
+                onSave={(patch) => patchMember(m.id, patch)}
+                onRemove={() => {
+                  updateProject(project.id, {
+                    members: members.filter((x) => x.id !== m.id),
+                    stages: (project.stages ?? []).map((st) =>
+                      st.assigneeId === m.id ? { ...st, assigneeId: null } : st,
+                    ),
+                  });
+                  if (m.userId) {
+                    void removeProjectMember({
+                      data: { projectId: project.id, memberUserId: m.userId },
+                    }).catch(() => {
+                      /* membership row cleanup is best-effort */
+                    });
+                  }
+                  toast.success("عضو حذف شد");
+                }}
+              />
             ))}
           </div>
         )}

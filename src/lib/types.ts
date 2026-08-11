@@ -35,7 +35,9 @@ export type NotificationType =
   | "INVITE"
   | "MEMBER_ACCEPTED"
   | "MEMBER_REJECTED"
-  | "STAGE_DONE";
+  | "STAGE_DONE"
+  | "STAGE_ASSIGNED"
+  | "STAGE_UPDATED";
 
 export interface AppNotification {
   id: string;
@@ -64,6 +66,7 @@ export interface ProjectMember {
   access?: MemberAccess;
   phone?: string;
   email?: string;
+  extension?: string;
   /** set when the member is a real signed-up account */
   userId?: string | null;
   userCode?: string | null;
@@ -79,6 +82,8 @@ export interface ProjectStage {
   dueDate: string | null;
   /** ProjectMember.id of the person responsible for this stage */
   assigneeId?: string | null;
+  /** last time `done` flipped — used to merge owner/member edits without losing ticks */
+  doneAt?: string | null;
 }
 
 export interface Project {

@@ -23,11 +23,27 @@ import {
 } from "@/lib/types";
 import { deriveProjectStatus } from "@/lib/access";
 import { JalaliDatePicker } from "./jalali-date-picker";
+import { MemberSearch } from "./member-search";
+import { MemberAvatar } from "./project-item";
+import { inviteProjectMember } from "@/lib/collab.functions";
 
 import { Plus, Trash2, Users, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
 const NONE = "__none__";
+
+/** The project row may still be syncing when a brand-new project invites a member. */
+async function inviteWithRetry(projectId: string, memberUserId: string, role: string) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      await inviteProjectMember({ data: { projectId, memberUserId, role } });
+      return true;
+    } catch {
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  return false;
+}
 
 function emptyForm(defaultDueDate?: string | null): ProjectInput {
   return {
@@ -141,12 +157,29 @@ export function ProjectFormBody({
       status: deriveProjectStatus(stages, form.status),
     };
     try {
+      let projectId = project?.id ?? "";
       if (project) {
         updateProject(project.id, payload);
         toast.success("پروژه به‌روزرسانی شد");
       } else {
-        createProject(payload);
+        projectId = createProject(payload).id;
         toast.success("پروژه ایجاد شد");
+      }
+      // real accounts added through search get a server-side invitation
+      const invitees = payload.members.filter(
+        (m) =>
+          !!m.userId &&
+          m.status === "PENDING" &&
+          !(project?.members ?? []).some((old) => old.userId === m.userId),
+      );
+      if (invitees.length) {
+        void (async () => {
+          for (const m of invitees) {
+            const ok = await inviteWithRetry(projectId, m.userId as string, m.role);
+            if (ok) toast.success(`دعوت برای «${m.name}» ارسال شد`);
+            else toast.error(`ارسال دعوت برای «${m.name}» ناموفق بود`);
+          }
+        })();
       }
       onDone();
     } catch {
@@ -295,8 +328,9 @@ export function ProjectFormBody({
           {form.members.map((m) => (
             <div
               key={m.id}
-              className="grid items-center gap-2 rounded-xl bg-muted/60 p-2 sm:grid-cols-[1fr_1fr_auto]"
+              className="grid items-center gap-2 rounded-xl bg-muted/60 p-2 sm:grid-cols-[auto_1fr_1fr_auto]"
             >
+              <MemberAvatar name={m.name} avatar={m.avatar} className="size-9" />
               <Input
                 value={m.name}
                 aria-label="نام عضو"
@@ -340,6 +374,42 @@ export function ProjectFormBody({
           {form.members.length === 0 && (
             <p className="text-xs text-muted-foreground">عضوی اضافه نشده است.</p>
           )}
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-dashed p-2">
+          <Label className="text-xs text-muted-foreground">
+            جست‌وجوی کاربر واقعی و دعوت او به پروژه
+          </Label>
+          <MemberSearch
+            onPick={(u) => {
+              if (form.members.some((m) => m.userId === u.id)) {
+                toast.error("این کاربر قبلاً اضافه شده است.");
+                return;
+              }
+              setForm((f) => ({
+                ...f,
+                members: [
+                  ...f.members,
+                  {
+                    id: uid(),
+                    name: u.name || u.userCode,
+                    role: memberRole.trim() || u.role || "عضو تیم",
+                    access: "VIEW",
+                    phone: u.phone,
+                    extension: u.extension,
+                    email: u.email,
+                    userId: u.id,
+                    userCode: u.userCode,
+                    username: u.username,
+                    avatar: u.avatar,
+                    status: "PENDING",
+                  },
+                ],
+              }));
+              setMemberRole("");
+              toast.success("کاربر اضافه شد؛ دعوت پس از ذخیره پروژه ارسال می‌شود.");
+            }}
+          />
         </div>
 
         <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">

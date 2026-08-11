@@ -24,8 +24,9 @@ import {
 import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
 import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects } from "./cloud";
-import { toggleAssignedStage } from "./collab.functions";
-import { deriveProjectStatus } from "./access";
+import { toggleAssignedStage, notifyStageChanges } from "./collab.functions";
+import { pendingCount, flushQueue } from "./sync-queue";
+import { deriveProjectStatus, mergeOwnedProject, mergeSharedStages } from "./access";
 
 import { toast } from "sonner";
 
@@ -161,6 +162,49 @@ function buildNotifications(tasks: Task[], existing: AppNotification[], reminder
   return next.slice(0, 200);
 }
 
+type Notice = { memberUserId: string; title: string; message: string };
+
+/** Builds in-app/push notices for stage assignment, date and status changes. */
+function stageNotices(before: Project, after: Pick<Project, "stages" | "members" | "title">): Notice[] {
+  const out: Notice[] = [];
+  const userIdOf = (memberId?: string | null) =>
+    (after.members ?? []).find((m) => m.id === memberId)?.userId ?? null;
+  const push = (memberId: string | null | undefined, title: string, message: string) => {
+    const uidOfMember = userIdOf(memberId);
+    if (uidOfMember) out.push({ memberUserId: uidOfMember, title, message });
+  };
+
+  for (const st of after.stages ?? []) {
+    const old = (before.stages ?? []).find((x) => x.id === st.id);
+    const project = after.title;
+    if (!old || old.assigneeId !== st.assigneeId) {
+      push(st.assigneeId, "مرحله به شما اختصاص یافت", `مرحله «${st.title}» در پروژه «${project}» به شما سپرده شد.`);
+      if (old?.assigneeId && old.assigneeId !== st.assigneeId) {
+        push(old.assigneeId, "تغییر مسئول مرحله", `مسئولیت مرحله «${st.title}» در پروژه «${project}» به فرد دیگری منتقل شد.`);
+      }
+      continue;
+    }
+    if ((old.dueDate ?? null) !== (st.dueDate ?? null)) {
+      push(st.assigneeId, "تغییر مهلت مرحله", `مهلت مرحله «${st.title}» در پروژه «${project}» تغییر کرد.`);
+    }
+    if (old.done !== st.done) {
+      push(
+        st.assigneeId,
+        st.done ? "مرحله شما تکمیل شد" : "مرحله شما بازگشایی شد",
+        `وضعیت مرحله «${st.title}» در پروژه «${project}» ${st.done ? "به تکمیل‌شده" : "به انجام‌نشده"} تغییر کرد.`,
+      );
+    }
+  }
+  return out;
+}
+
+function sendNotices(projectId: string, items: Notice[]) {
+  if (!items.length) return;
+  void notifyStageChanges({ data: { projectId, items } }).catch(() => {
+    /* notifications are best-effort */
+  });
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<AppData>(emptyData);
@@ -168,15 +212,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const hydrated = useRef(false);
   const syncUserId = useRef<string | null>(null);
 
-  const storageKey = storageKeyFor(user?.id ?? null);
+  const userId = user?.id ?? null;
+  const storageKey = storageKeyFor(userId);
 
   // load: cloud when signed in, local cache otherwise (cache is per account)
   useEffect(() => {
     if (authLoading) return;
     let cancelled = false;
-    const key = storageKeyFor(user?.id ?? null);
+    const key = storageKeyFor(userId);
 
-    if (!user) {
+    if (!userId) {
       syncUserId.current = null;
       setData(load(key));
       hydrated.current = true;
@@ -187,6 +232,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setReady(false);
     hydrated.current = false;
     (async () => {
+      // send anything still queued from the previous session before trusting the server copy
+      try {
+        await flushQueue(userId);
+      } catch {
+        /* stays queued */
+      }
       let local = load(key);
       // one-time adoption of the pre-account cache for the first signed-in user
       if (local.tasks.length === 0 && local.projects.length === 0) {
@@ -195,7 +246,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       let snapshot;
       try {
-        snapshot = await fetchCloud(user.id);
+        snapshot = await fetchCloud(userId);
       } catch {
         if (cancelled) return;
         // offline: fall back to local cache
@@ -216,7 +267,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         local.tasks.length > 0 ||
         local.categories.length > 0 ||
         local.tags.length > 0;
-      const useLocal = cloudEmpty && localHasData;
+      // unsent local edits are newer than whatever the server has → never overwrite them
+      const hasPending = pendingCount(userId) > 0;
+      const useLocal = (cloudEmpty && localHasData) || (hasPending && localHasData);
 
       const next: AppData = {
         version: 1,
@@ -225,40 +278,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         categories: useLocal ? local.categories : snapshot.categories,
         tags: useLocal ? local.tags : snapshot.tags,
         notifications: useLocal ? local.notifications : snapshot.notifications,
-        profile: snapshot.profile ?? local.profile,
+        profile: hasPending ? (local.profile ?? snapshot.profile) : (snapshot.profile ?? local.profile),
         settings: snapshot.settings,
       };
 
       setData(next);
       hydrated.current = true;
-      syncUserId.current = user.id;
+      syncUserId.current = userId;
       setReady(true);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading]);
+  }, [userId, authLoading]);
 
   useEffect(() => {
     if (!hydrated.current) return;
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch {
-      /* quota errors ignored */
-    }
+    // debounced so typing in a form does not serialize the whole store on every keystroke
+    const t = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(data));
+      } catch {
+        /* quota errors ignored */
+      }
+    }, 400);
+    return () => window.clearTimeout(t);
   }, [data, storageKey]);
 
   // debounced write-through sync to the cloud
   useEffect(() => {
-    if (!hydrated.current || !user || syncUserId.current !== user.id) return;
+    if (!hydrated.current || !userId || syncUserId.current !== userId) return;
     const t = window.setTimeout(() => {
-      pushCloud(user.id, data).catch(() => {
+      pushCloud(userId, data).catch(() => {
         /* offline: local cache keeps the data until next sync */
       });
     }, 900);
     return () => window.clearTimeout(t);
-  }, [data, user]);
+  }, [data, userId]);
 
   // theme
   useEffect(() => {
@@ -297,11 +354,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // pulls shared projects plus stage ticks made by invited members on owned projects
   const refreshCollab = useCallback(async () => {
-    if (!user || !hydrated.current) return;
+    if (!userId || !hydrated.current) return;
     try {
       const [shared, owned] = await Promise.all([
-        fetchSharedProjects(user.id),
-        fetchOwnedProjects(user.id),
+        fetchSharedProjects(userId),
+        fetchOwnedProjects(userId),
       ]);
       setData((prev) => ({
         ...prev,
@@ -310,32 +367,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             .filter((p) => !p.readOnly)
             .map((p) => {
               const remote = owned.find((o) => o.id === p.id);
-              // only remote stage state can change behind our back; keep local edits otherwise
-              if (!remote || remote.updatedAt <= p.updatedAt) return p;
-              const status = deriveProjectStatus(remote.stages, p.status);
-              return {
-                ...p,
-                stages: remote.stages,
-                status,
-                completedAt:
-                  status === "COMPLETED" ? (p.completedAt ?? new Date().toISOString()) : null,
-              };
+              // merge instead of replace: member ticks and invite answers survive local edits
+              return remote ? mergeOwnedProject(p, remote) : p;
             }),
-
-          ...shared,
+          ...shared.map((s) => {
+            const local = prev.projects.find((p) => p.id === s.id);
+            return local ? { ...s, stages: mergeSharedStages(local.stages, s.stages) } : s;
+          }),
         ],
       }));
     } catch {
       /* offline: keep whatever we have */
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!ready || !user) return;
-    void refreshCollab();
-    const t = window.setInterval(() => void refreshCollab(), 45_000);
-    return () => window.clearInterval(t);
-  }, [ready, user, refreshCollab]);
+    if (!ready || !userId) return;
+    // skip polling while the tab is in the background to keep the UI snappy
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void refreshCollab();
+    };
+    tick();
+    const t = window.setInterval(tick, 60_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [ready, userId, refreshCollab]);
+
 
 
   const value = useMemo<StoreValue>(() => {
@@ -419,7 +480,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         patch((p) => ({ ...p, projects: [project, ...p.projects] }));
         return project;
       },
-      updateProject: (id, p2) =>
+      updateProject: (id, p2) => {
+        const before = data.projects.find((pr) => pr.id === id);
+        if (before && !before.readOnly && p2.stages) {
+          sendNotices(
+            id,
+            stageNotices(before, {
+              stages: p2.stages,
+              members: p2.members ?? before.members,
+              title: p2.title ?? before.title,
+            }),
+          );
+        }
         patch((p) => ({
           ...p,
           projects: p.projects.map((pr) =>
@@ -437,7 +509,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 }
               : pr,
           ),
-        })),
+        }));
+      },
       deleteProject: (id) =>
         patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) })),
       setProjectStatus: (id, status) =>
@@ -471,8 +544,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           projects: p.projects.map((pr) => {
             if (pr.id !== projectId) return pr;
             const stages = pr.stages.map((st) =>
-              st.id === stageId ? { ...st, done: !st.done } : st,
+              st.id === stageId ? { ...st, done: !st.done, doneAt: now() } : st,
             );
+            sendNotices(pr.id, stageNotices(pr, { ...pr, stages }));
             const status = deriveProjectStatus(stages, pr.status);
             return {
               ...pr,
