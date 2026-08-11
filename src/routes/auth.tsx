@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Loader2, KeyRound, IdCard } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -29,6 +29,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,26 +42,55 @@ function AuthPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email.trim() || password.length < 6) {
-      setError("ایمیل معتبر و رمز عبور حداقل ۶ نویسه لازم است.");
+    const identifier = email.trim();
+    if (!identifier || password.length < 6) {
+      setError(
+        mode === "signup"
+          ? "ایمیل معتبر و رمز عبور حداقل ۶ نویسه لازم است."
+          : "ایمیل یا نام کاربری و رمز عبور حداقل ۶ نویسه لازم است.",
+      );
       return;
     }
     setBusy(true);
     try {
       if (mode === "signup") {
+        const uname = username.trim().toLowerCase();
+        if (uname && !/^[a-z0-9._-]{3,24}$/.test(uname)) {
+          throw new Error("نام کاربری باید ۳ تا ۲۴ نویسه لاتین، عدد یا . _ - باشد.");
+        }
+        if (uname) {
+          const { data: free, error: rpcError } = await supabase.rpc("username_available", {
+            _username: uname,
+          });
+          if (rpcError) throw rpcError;
+          if (!free) throw new Error("این نام کاربری قبلاً گرفته شده است.");
+        }
         const { error: err } = await supabase.auth.signUp({
-          email: email.trim(),
+          email: identifier,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { name: name.trim() || email.split("@")[0] },
+            data: {
+              name: name.trim() || identifier.split("@")[0],
+              username: uname || null,
+            },
           },
         });
         if (err) throw err;
         toast.success("حساب ساخته شد. اگر تأیید ایمیل لازم باشد، لینک برایتان ارسال می‌شود.");
       } else {
+        // the user may type either an email address or their chosen username
+        let loginEmail = identifier;
+        if (!identifier.includes("@")) {
+          const { data: found, error: rpcError } = await supabase.rpc("email_for_username", {
+            _username: identifier.toLowerCase(),
+          });
+          if (rpcError) throw rpcError;
+          if (!found) throw new Error("کاربری با این نام کاربری پیدا نشد.");
+          loginEmail = found;
+        }
         const { error: err } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: loginEmail,
           password,
         });
         if (err) throw err;
@@ -92,15 +122,15 @@ function AuthPage() {
       <div className="surface w-full max-w-md p-7">
         <div className="mb-6 space-y-2 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            {mode === "signin" ? <LogIn className="size-6" /> : <UserPlus className="size-6" />}
+            {mode === "signin" ? <KeyRound className="size-6" /> : <IdCard className="size-6" />}
           </div>
           <h1 className="text-2xl font-bold">
             {mode === "signin" ? "ورود به حساب" : "ساخت حساب کاربری"}
           </h1>
           <p className="text-sm text-muted-foreground">
             {mode === "signin"
-              ? "با ایمیل و رمز عبور خود وارد شوید تا وظایف و پروژه‌هایتان بازیابی شود."
-              : "یک حساب جدید بسازید تا وظایف و پروژه‌ها روی همه دستگاه‌ها همگام شوند."}
+              ? "با ایمیل یا نام کاربری و رمز عبور وارد شوید تا وظایف و پروژه‌هایتان بازیابی شود."
+              : "نام، نام کاربری و ایمیل خود را ثبت کنید تا داده‌ها روی همه دستگاه‌ها همگام شوند."}
           </p>
         </div>
 
@@ -117,15 +147,30 @@ function AuthPage() {
               />
             </div>
           )}
+          {mode === "signup" && (
+            <div className="space-y-2">
+              <Label htmlFor="a-username">نام کاربری</Label>
+              <Input
+                id="a-username"
+                dir="ltr"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="zahra.karimi"
+              />
+              <p className="text-xs text-muted-foreground">
+                با این نام کاربری هم می‌توانید وارد شوید و هم در پروژه‌ها پیدا شوید.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="a-email">ایمیل</Label>
+            <Label htmlFor="a-email">{mode === "signin" ? "ایمیل یا نام کاربری" : "ایمیل"}</Label>
             <Input
               id="a-email"
-              type="email"
+              type={mode === "signin" ? "text" : "email"}
               dir="ltr"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              placeholder={mode === "signin" ? "name@example.com یا zahra.karimi" : "name@example.com"}
             />
           </div>
           <div className="space-y-2">
