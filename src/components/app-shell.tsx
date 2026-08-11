@@ -88,8 +88,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-base font-bold leading-snug md:text-lg">
                 {[profile.role, profile.name].filter(Boolean).join(" | ")}
               </p>
-              <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm">
-                {profile.email || "بدون ایمیل"}
+              <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm" dir="ltr">
+                {[profile.username ? `@${profile.username}` : "", profile.userCode]
+                  .filter(Boolean)
+                  .join(" · ") || profile.email || "بدون ایمیل"}
               </p>
               {(profile.phone || profile.extension) && (
                 <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm">
