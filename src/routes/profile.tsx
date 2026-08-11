@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 
 export const Route = createFileRoute("/profile")({
@@ -32,16 +33,39 @@ function ProfilePage() {
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [extension, setExtension] = useState(profile?.extension ?? "");
   const [avatar, setAvatar] = useState(profile?.avatar ?? "");
+  const [username, setUsername] = useState(profile?.username ?? "");
   const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) {
       setError("نام باید حداقل ۲ نویسه باشد.");
       return;
     }
+    const uname = username.trim().toLowerCase();
+    if (uname && !/^[a-z0-9._-]{3,24}$/.test(uname)) {
+      setError("نام کاربری باید ۳ تا ۲۴ نویسه لاتین، عدد یا . _ - باشد.");
+      return;
+    }
+    if (uname && uname !== (profile?.username ?? "").toLowerCase()) {
+      setChecking(true);
+      const { data: free, error: rpcError } = await supabase.rpc("username_available", {
+        _username: uname,
+      });
+      setChecking(false);
+      if (rpcError) {
+        setError("بررسی نام کاربری ناموفق بود.");
+        return;
+      }
+      if (!free) {
+        setError("این نام کاربری قبلاً گرفته شده است.");
+        return;
+      }
+    }
     setError("");
     saveProfile({
+      username: uname || null,
       name: name.trim(),
       role: role.trim(),
       email: email.trim(),
@@ -67,6 +91,11 @@ function ProfilePage() {
           <p className="text-lg font-bold">
             {profile?.role ? `${profile.role} | ${profile.name}` : profile?.name}
           </p>
+          <p className="text-sm text-muted-foreground" dir="ltr">
+            {[profile?.username ? `@${profile.username}` : "", profile?.userCode]
+              .filter(Boolean)
+              .join(" · ") || profile?.email}
+          </p>
           <p className="text-sm text-muted-foreground">{profile?.email || "بدون ایمیل"}</p>
           {(profile?.phone || profile?.extension) && (
             <p className="text-sm text-muted-foreground">
@@ -81,7 +110,7 @@ function ProfilePage() {
         </div>
       </div>
 
-      <form className="surface max-w-lg space-y-4 p-5" onSubmit={submit}>
+      <form className="surface max-w-lg space-y-4 p-5" onSubmit={(e) => void submit(e)}>
         <div className="space-y-2">
           <Label htmlFor="p-name">نام</Label>
           <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -94,6 +123,21 @@ function ProfilePage() {
             onChange={(e) => setRole(e.target.value)}
             placeholder="مثلاً کارشناس"
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="p-username">نام کاربری (برای ورود و دعوت شدن)</Label>
+          <Input
+            id="p-username"
+            dir="ltr"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="zahra.karimi"
+          />
+          {profile?.userCode && (
+            <p className="text-xs text-muted-foreground" dir="ltr">
+              شناسه خودکار: {profile.userCode}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="p-email">ایمیل</Label>
@@ -131,7 +175,9 @@ function ProfilePage() {
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit">ذخیره</Button>
+        <Button type="submit" disabled={checking}>
+          ذخیره
+        </Button>
       </form>
     </div>
   );
