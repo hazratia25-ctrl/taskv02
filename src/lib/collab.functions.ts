@@ -8,6 +8,10 @@ export interface FoundUser {
   username: string | null;
   userCode: string;
   avatar: string | null;
+  role: string;
+  phone: string;
+  extension: string;
+  email: string;
 }
 
 export interface InviteInfo {
@@ -51,6 +55,10 @@ export const searchAppUsers = createServerFn({ method: "POST" })
       username: r.username ?? null,
       userCode: r.user_code,
       avatar: r.avatar ?? null,
+      role: r.role ?? "",
+      phone: r.phone ?? "",
+      extension: r.extension ?? "",
+      email: r.email ?? "",
     }));
   });
 
@@ -262,7 +270,9 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
       throw new Error("این مرحله به شما اختصاص داده نشده است.");
     }
 
-    const nextStages = stages.map((s) => (s.id === data.stageId ? { ...s, done: !s.done } : s));
+    const nextStages = stages.map((s) =>
+      s.id === data.stageId ? { ...s, done: !s.done, doneAt: new Date().toISOString() } : s,
+    );
     const { deriveProjectStatus } = await import("./access");
     const nextStatus = deriveProjectStatus(nextStages, project.status as never);
     const { error: updateError } = await supabaseAdmin
@@ -289,4 +299,56 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
     });
 
     return { ok: true, done: !stage.done };
+  });
+
+/** Owner tells stage assignees that their stage changed (in-app + push). */
+export const notifyStageChanges = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { projectId: string; items: { memberUserId: string; title: string; message: string }[] }) => ({
+      projectId: String(data.projectId),
+      items: (data.items ?? []).slice(0, 30).map((i) => ({
+        memberUserId: String(i.memberUserId),
+        title: String(i.title).slice(0, 120),
+        message: String(i.message).slice(0, 400),
+      })),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (!data.items.length) return { ok: true, sent: 0 };
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", data.projectId)
+      .maybeSingle();
+    if (!project || project.user_id !== userId) throw new Error("این پروژه از شما نیست.");
+
+    const { data: allowed } = await supabase
+      .from("project_members")
+      .select("member_user_id")
+      .eq("project_id", data.projectId)
+      .eq("owner_id", userId);
+    const allowedIds = new Set((allowed ?? []).map((m) => m.member_user_id));
+
+    const { sendPushToUser } = await import("./push-server");
+    let sent = 0;
+    for (const item of data.items) {
+      if (!allowedIds.has(item.memberUserId)) continue;
+      await notify(item.memberUserId, {
+        taskId: data.projectId,
+        type: "STAGE_UPDATED",
+        title: item.title,
+        message: item.message,
+      });
+      await sendPushToUser(item.memberUserId, {
+        title: item.title,
+        body: item.message,
+        url: "/notifications",
+        tag: `stage-${data.projectId}`,
+      });
+      sent += 1;
+    }
+    return { ok: true, sent };
   });

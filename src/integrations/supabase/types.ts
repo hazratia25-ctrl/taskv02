@@ -307,6 +307,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      email_for_username: { Args: { _username: string }; Returns: string }
       gen_user_code: { Args: never; Returns: string }
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
@@ -316,12 +317,17 @@ export type Database = {
         Args: { _q: string }
         Returns: {
           avatar: string
+          email: string
+          extension: string
           id: string
           name: string
+          phone: string
+          role: string
           user_code: string
           username: string
         }[]
       }
+      username_available: { Args: { _username: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
