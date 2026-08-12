@@ -45,7 +45,7 @@ type ProjectRow = {
   completed_at: string | null;
 };
 
-function mapProject(row: ProjectRow, userId: string): Project {
+export function mapProjectRow(row: ProjectRow, userId: string): Project {
   const members = (row.members as ProjectMember[] | null) ?? [];
   const shared = row.user_id !== userId;
   const mine = members.find((m) => m.userId === userId);
@@ -79,13 +79,13 @@ export async function fetchSharedProjects(userId: string): Promise<Project[]> {
   const { data } = await supabase.from("projects").select("*").in("id", ids);
   return ((data ?? []) as ProjectRow[])
     .filter((row) => row.user_id !== userId)
-    .map((row) => mapProject(row, userId));
+    .map((row) => mapProjectRow(row, userId));
 }
 
 /** Owned projects, used to pick up stage ticks made by invited members. */
 export async function fetchOwnedProjects(userId: string): Promise<Project[]> {
   const { data } = await supabase.from("projects").select("*").eq("user_id", userId);
-  return ((data ?? []) as ProjectRow[]).map((row) => mapProject(row, userId));
+  return ((data ?? []) as ProjectRow[]).map((row) => mapProjectRow(row, userId));
 }
 
 export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
@@ -144,7 +144,7 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
     })),
     projects: [
       ...((projectsRes.data ?? []) as unknown as ProjectRow[]).map((row) =>
-        mapProject(row, userId),
+        mapProjectRow(row, userId),
       ),
       ...shared,
     ],
@@ -171,7 +171,7 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
   };
 }
 
-type SyncTable = "tasks" | "projects" | "categories" | "tags" | "notifications";
+type SyncTable = "tasks" | "categories" | "tags" | "notifications";
 type Row = { id: string } & Record<string, unknown>;
 
 /** Cache of the last synced row shapes so we only send what actually changed. */
@@ -208,25 +208,6 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     updated_at: t.updatedAt,
     completed_at: t.completedAt,
   }));
-  // shared (read-only) projects belong to another account and are never uploaded from here
-  const projects: Row[] = data.projects
-    .filter((p) => !p.readOnly)
-    .map((p) => ({
-      user_id: userId,
-      id: p.id,
-      title: p.title,
-      description: p.description ?? "",
-      status: p.status,
-      priority: p.priority,
-      category_id: p.categoryId,
-      tag_ids: p.tagIds ?? [],
-      due_date: p.dueDate,
-      members: (p.members ?? []) as unknown as Json,
-      stages: (p.stages ?? []) as unknown as Json,
-      created_at: p.createdAt,
-      updated_at: p.updatedAt,
-      completed_at: p.completedAt,
-    }));
   const categories: Row[] = data.categories.map((c) => ({
     user_id: userId,
     id: c.id,
@@ -253,7 +234,6 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
 
   const batches: [SyncTable, Row[]][] = [
     ["tasks", tasks],
-    ["projects", projects],
     ["categories", categories],
     ["tags", tags],
     ["notifications", notifications],
