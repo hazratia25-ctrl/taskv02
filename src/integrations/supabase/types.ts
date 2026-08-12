@@ -313,6 +313,31 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      save_owned_project_atomic: {
+        Args: { _patch: Json; _project_id: string }
+        Returns: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          members: Json
+          priority: string
+          stages: Json
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       search_app_users: {
         Args: { _q: string }
         Returns: {
@@ -326,6 +351,31 @@ export type Database = {
           user_code: string
           username: string
         }[]
+      }
+      toggle_assigned_stage_atomic: {
+        Args: { _project_id: string; _stage_id: string }
+        Returns: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          members: Json
+          priority: string
+          stages: Json
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       username_available: { Args: { _username: string }; Returns: boolean }
     }
