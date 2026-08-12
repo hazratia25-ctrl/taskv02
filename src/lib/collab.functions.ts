@@ -23,6 +23,64 @@ export interface InviteInfo {
   createdAt: string;
 }
 
+export interface ProjectWriteInput {
+  id?: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  categoryId: string | null;
+  tagIds: string[];
+  dueDate: string | null;
+  members: unknown[];
+  stages: unknown[];
+  createdAt?: string;
+}
+
+/** Creates an owned project with ownership derived only from the verified session. */
+export const createOwnedProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: ProjectWriteInput) => data)
+  .handler(async ({ data, context }) => {
+    const id = data.id || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+    const timestamp = new Date().toISOString();
+    const { data: row, error } = await context.supabase
+      .from("projects")
+      .insert({
+        id,
+        user_id: context.userId,
+        title: String(data.title).slice(0, 300),
+        description: String(data.description ?? ""),
+        status: data.status,
+        priority: data.priority,
+        category_id: data.categoryId,
+        tag_ids: data.tagIds ?? [],
+        due_date: data.dueDate,
+        members: data.members as never,
+        stages: data.stages as never,
+        created_at: data.createdAt ?? timestamp,
+        updated_at: timestamp,
+        completed_at: data.status === "COMPLETED" ? timestamp : null,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/** Atomically saves an owned project without overwriting newer member stage ticks. */
+export const saveOwnedProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { projectId: string; patch: ProjectWriteInput }) => data)
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.rpc("save_owned_project_atomic", {
+      _project_id: data.projectId,
+      _patch: data.patch as never,
+    });
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 const nid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 async function notify(
@@ -240,56 +298,30 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
     stageId: String(data.stageId),
   }))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-
-    const { data: membership, error: memberError } = await supabase
+    const { data: membership } = await context.supabase
       .from("project_members")
-      .select("id, owner_id")
+      .select("owner_id")
       .eq("project_id", data.projectId)
-      .eq("member_user_id", userId)
+      .eq("member_user_id", context.userId)
       .eq("status", "ACCEPTED")
       .maybeSingle();
-    if (memberError) throw new Error(memberError.message);
-    if (!membership) throw new Error("شما عضو پذیرفته‌شده این پروژه نیستید.");
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: project, error } = await supabaseAdmin
+    const { data: before } = await context.supabase
       .from("projects")
-      .select("title, members, stages, status, completed_at")
+      .select("title, members, stages")
       .eq("id", data.projectId)
       .maybeSingle();
+    const oldStages = (before?.stages as unknown as ProjectStage[] | null) ?? [];
+    const stage = oldStages.find((item) => item.id === data.stageId);
+    const { data: project, error } = await context.supabase.rpc("toggle_assigned_stage_atomic", {
+      _project_id: data.projectId,
+      _stage_id: data.stageId,
+    });
     if (error) throw new Error(error.message);
     if (!project) throw new Error("پروژه یافت نشد.");
 
     const members = (project.members as unknown as ProjectMember[] | null) ?? [];
-    const myMemberIds = members.filter((m) => m.userId === userId).map((m) => m.id);
-    const stages = (project.stages as unknown as ProjectStage[] | null) ?? [];
-    const stage = stages.find((s) => s.id === data.stageId);
-    if (!stage) throw new Error("مرحله یافت نشد.");
-    if (!stage.assigneeId || !myMemberIds.includes(stage.assigneeId)) {
-      throw new Error("این مرحله به شما اختصاص داده نشده است.");
-    }
-
-    const nextStages = stages.map((s) =>
-      s.id === data.stageId ? { ...s, done: !s.done, doneAt: new Date().toISOString() } : s,
-    );
-    const { deriveProjectStatus } = await import("./access");
-    const nextStatus = deriveProjectStatus(nextStages, project.status as never);
-    const { error: updateError } = await supabaseAdmin
-      .from("projects")
-      .update({
-        stages: nextStages as unknown as never,
-        status: nextStatus,
-        completed_at:
-          nextStatus === "COMPLETED" ? (project.completed_at ?? new Date().toISOString()) : null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", data.projectId);
-    if (updateError) throw new Error(updateError.message);
-
-
-    const myName = members.find((m) => m.userId === userId)?.name ?? "عضو تیم";
-    await notify(membership.owner_id, {
+    const myName = members.find((m) => m.userId === context.userId)?.name ?? "عضو تیم";
+    if (membership && stage) await notify(membership.owner_id, {
       taskId: data.projectId,
       type: "STAGE_DONE",
       title: !stage.done ? "مرحله انجام شد" : "مرحله بازگشت به انجام‌نشده",
@@ -298,7 +330,7 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
       }.`,
     });
 
-    return { ok: true, done: !stage.done };
+    return project;
   });
 
 /** Owner tells stage assignees that their stage changed (in-app + push). */

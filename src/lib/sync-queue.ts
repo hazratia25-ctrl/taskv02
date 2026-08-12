@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type SyncTable = "tasks" | "projects" | "categories" | "tags" | "notifications" | "profiles";
+export type SyncTable = "tasks" | "categories" | "tags" | "notifications" | "profiles";
 
 export type SyncOp =
   | { key: string; table: SyncTable; kind: "upsert"; row: Record<string, unknown> }
