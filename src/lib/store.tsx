@@ -405,6 +405,67 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   }, [ready, userId, refreshCollab]);
 
+  /** Serialises a local project into the server write contract. */
+  const toWrite = useCallback(
+    (p: Project): ProjectWriteInput => ({
+      id: p.id,
+      title: p.title,
+      description: p.description ?? "",
+      status: p.status,
+      priority: p.priority,
+      categoryId: p.categoryId,
+      tagIds: p.tagIds ?? [],
+      dueDate: p.dueDate,
+      members: p.members ?? [],
+      stages: p.stages ?? [],
+      createdAt: p.createdAt,
+    }),
+    [],
+  );
+
+  const restore = useCallback((previous: Project | null, id: string) => {
+    setData((prev) => ({
+      ...prev,
+      projects: previous
+        ? prev.projects.map((p) => (p.id === id ? previous : p))
+        : prev.projects.filter((p) => p.id !== id),
+    }));
+  }, []);
+
+  const failed = useCallback(
+    (e: unknown, previous: Project | null, id: string) => {
+      restore(previous, id);
+      toast.error(e instanceof Error ? e.message : "ذخیرهٔ پروژه در سرور ناموفق بود");
+    },
+    [restore],
+  );
+
+  /** Persists an owned project to the cloud; rolls the local state back on failure. */
+  const persistProject = useCallback(
+    (next: Project, previous: Project | null, isNew = false) => {
+      if (!userId || next.readOnly) return;
+      const call = isNew
+        ? createOwnedProject({ data: toWrite(next) })
+        : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
+      void call.catch((e: unknown) => failed(e, previous, next.id));
+    },
+    [userId, toWrite, failed],
+  );
+
+  const removeProject = useCallback(
+    (previous: Project) => {
+      if (!userId || previous.readOnly) return;
+      void deleteOwnedProject({ data: { projectId: previous.id } }).catch((e: unknown) => {
+        setData((prev) =>
+          prev.projects.some((p) => p.id === previous.id)
+            ? prev
+            : { ...prev, projects: [previous, ...prev.projects] },
+        );
+        toast.error(e instanceof Error ? e.message : "حذف پروژه در سرور ناموفق بود");
+      });
+    },
+    [userId],
+  );
 
 
   const value = useMemo<StoreValue>(() => {
