@@ -81,6 +81,22 @@ export const saveOwnedProject = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Deletes an owned project (ownership enforced by RLS on user_id). */
+export const deleteOwnedProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { projectId: string }) => ({ projectId: String(data.projectId) }))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("projects")
+      .delete()
+      .eq("id", data.projectId)
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("project_members").delete().eq("project_id", data.projectId);
+    return { ok: true };
+  });
+
+
 const nid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 async function notify(
