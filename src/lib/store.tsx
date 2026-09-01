@@ -730,7 +730,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       resetAll: () => setData(emptyData),
     };
-  }, [data, ready, patch, refreshCollab]);
+  }, [data, ready, patch, refreshCollab, persistProject, removeProject]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
