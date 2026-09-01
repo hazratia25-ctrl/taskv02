@@ -619,6 +619,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             );
           return;
         }
+        const before = target ?? null;
+        let next: Project | null = null;
         patch((p) => ({
           ...p,
           projects: p.projects.map((pr) => {
@@ -628,16 +630,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             );
             sendNotices(pr.id, stageNotices(pr, { ...pr, stages }));
             const status = deriveProjectStatus(stages, pr.status);
-            return {
+            next = {
               ...pr,
               stages,
               status,
               completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
               updatedAt: now(),
             };
+            return next;
           }),
         }));
+        if (next) persistProject(next, before);
       },
+
 
       createCategory: (name, color) =>
         patch((p) => ({
