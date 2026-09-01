@@ -547,6 +547,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           completedAt: input.status === "COMPLETED" ? now() : null,
         };
         patch((p) => ({ ...p, projects: [project, ...p.projects] }));
+        persistProject(project, null, true);
         return project;
       },
       updateProject: (id, p2) => {
@@ -561,41 +562,51 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }),
           );
         }
+        let next: Project | null = null;
         patch((p) => ({
           ...p,
-          projects: p.projects.map((pr) =>
-            pr.id === id
-              ? {
-                  ...pr,
-                  ...p2,
-                  updatedAt: now(),
-                  completedAt:
-                    p2.status === "COMPLETED"
-                      ? (pr.completedAt ?? now())
-                      : p2.status
-                        ? null
-                        : pr.completedAt,
-                }
-              : pr,
-          ),
+          projects: p.projects.map((pr) => {
+            if (pr.id !== id) return pr;
+            next = {
+              ...pr,
+              ...p2,
+              updatedAt: now(),
+              completedAt:
+                p2.status === "COMPLETED"
+                  ? (pr.completedAt ?? now())
+                  : p2.status
+                    ? null
+                    : pr.completedAt,
+            };
+            return next;
+          }),
         }));
+        if (next) persistProject(next, before ?? null);
       },
-      deleteProject: (id) =>
-        patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) })),
-      setProjectStatus: (id, status) =>
+      deleteProject: (id) => {
+        const before = data.projects.find((pr) => pr.id === id);
+        patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) }));
+        if (before) removeProject(before);
+      },
+      setProjectStatus: (id, status) => {
+        const before = data.projects.find((pr) => pr.id === id);
+        let next: Project | null = null;
         patch((p) => ({
           ...p,
-          projects: p.projects.map((pr) =>
-            pr.id === id
-              ? {
-                  ...pr,
-                  status,
-                  completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
-                  updatedAt: now(),
-                }
-              : pr,
-          ),
-        })),
+          projects: p.projects.map((pr) => {
+            if (pr.id !== id) return pr;
+            next = {
+              ...pr,
+              status,
+              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
+              updatedAt: now(),
+            };
+            return next;
+          }),
+        }));
+        if (next) persistProject(next, before ?? null);
+      },
+
       refreshCollab,
       toggleStage: (projectId, stageId) => {
         const target = data.projects.find((p) => p.id === projectId);
