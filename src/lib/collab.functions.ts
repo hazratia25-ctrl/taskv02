@@ -96,7 +96,6 @@ export const deleteOwnedProject = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
 const nid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 async function notify(
@@ -169,7 +168,11 @@ export const inviteProjectMember = createServerFn({ method: "POST" })
     );
     if (error) throw new Error(error.message);
 
-    const { data: me } = await supabase.from("profiles").select("name").eq("id", userId).maybeSingle();
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", userId)
+      .maybeSingle();
     const inviter = me?.name || "یکی از همکاران";
 
     await notify(data.memberUserId, {
@@ -207,11 +210,17 @@ export const listMyInvites = createServerFn({ method: "POST" })
       supabaseAdmin
         .from("projects")
         .select("id, title")
-        .in("id", rows.map((r) => r.project_id)),
+        .in(
+          "id",
+          rows.map((r) => r.project_id),
+        ),
       supabaseAdmin
         .from("profiles")
         .select("id, name")
-        .in("id", rows.map((r) => r.owner_id)),
+        .in(
+          "id",
+          rows.map((r) => r.owner_id),
+        ),
     ]);
 
     return rows.map((r) => ({
@@ -245,7 +254,11 @@ export const respondProjectInvite = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [{ data: project }, { data: me }] = await Promise.all([
-      supabaseAdmin.from("projects").select("title, members").eq("id", row.project_id).maybeSingle(),
+      supabaseAdmin
+        .from("projects")
+        .select("title, members")
+        .eq("id", row.project_id)
+        .maybeSingle(),
       supabaseAdmin
         .from("profiles")
         .select("name, user_code, avatar, username")
@@ -337,14 +350,15 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
 
     const members = (project.members as unknown as ProjectMember[] | null) ?? [];
     const myName = members.find((m) => m.userId === context.userId)?.name ?? "عضو تیم";
-    if (membership && stage) await notify(membership.owner_id, {
-      taskId: data.projectId,
-      type: "STAGE_DONE",
-      title: !stage.done ? "مرحله انجام شد" : "مرحله بازگشت به انجام‌نشده",
-      message: `${myName}: مرحله «${stage.title}» در پروژه «${project.title}» ${
-        !stage.done ? "انجام شد" : "به حالت انجام‌نشده برگشت"
-      }.`,
-    });
+    if (membership && stage)
+      await notify(membership.owner_id, {
+        taskId: data.projectId,
+        type: "STAGE_DONE",
+        title: !stage.done ? "مرحله انجام شد" : "مرحله بازگشت به انجام‌نشده",
+        message: `${myName}: مرحله «${stage.title}» در پروژه «${project.title}» ${
+          !stage.done ? "انجام شد" : "به حالت انجام‌نشده برگشت"
+        }.`,
+      });
 
     return project;
   });
@@ -353,7 +367,10 @@ export const toggleAssignedStage = createServerFn({ method: "POST" })
 export const notifyStageChanges = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: { projectId: string; items: { memberUserId: string; title: string; message: string }[] }) => ({
+    (data: {
+      projectId: string;
+      items: { memberUserId: string; title: string; message: string }[];
+    }) => ({
       projectId: String(data.projectId),
       items: (data.items ?? []).slice(0, 30).map((i) => ({
         memberUserId: String(i.memberUserId),

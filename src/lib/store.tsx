@@ -173,7 +173,10 @@ function buildNotifications(tasks: Task[], existing: AppNotification[], reminder
 type Notice = { memberUserId: string; title: string; message: string };
 
 /** Builds in-app/push notices for stage assignment, date and status changes. */
-function stageNotices(before: Project, after: Pick<Project, "stages" | "members" | "title">): Notice[] {
+function stageNotices(
+  before: Project,
+  after: Pick<Project, "stages" | "members" | "title">,
+): Notice[] {
   const out: Notice[] = [];
   const userIdOf = (memberId?: string | null) =>
     (after.members ?? []).find((m) => m.id === memberId)?.userId ?? null;
@@ -186,14 +189,26 @@ function stageNotices(before: Project, after: Pick<Project, "stages" | "members"
     const old = (before.stages ?? []).find((x) => x.id === st.id);
     const project = after.title;
     if (!old || old.assigneeId !== st.assigneeId) {
-      push(st.assigneeId, "مرحله به شما اختصاص یافت", `مرحله «${st.title}» در پروژه «${project}» به شما سپرده شد.`);
+      push(
+        st.assigneeId,
+        "مرحله به شما اختصاص یافت",
+        `مرحله «${st.title}» در پروژه «${project}» به شما سپرده شد.`,
+      );
       if (old?.assigneeId && old.assigneeId !== st.assigneeId) {
-        push(old.assigneeId, "تغییر مسئول مرحله", `مسئولیت مرحله «${st.title}» در پروژه «${project}» به فرد دیگری منتقل شد.`);
+        push(
+          old.assigneeId,
+          "تغییر مسئول مرحله",
+          `مسئولیت مرحله «${st.title}» در پروژه «${project}» به فرد دیگری منتقل شد.`,
+        );
       }
       continue;
     }
     if ((old.dueDate ?? null) !== (st.dueDate ?? null)) {
-      push(st.assigneeId, "تغییر مهلت مرحله", `مهلت مرحله «${st.title}» در پروژه «${project}» تغییر کرد.`);
+      push(
+        st.assigneeId,
+        "تغییر مهلت مرحله",
+        `مهلت مرحله «${st.title}» در پروژه «${project}» تغییر کرد.`,
+      );
     }
     if (old.done !== st.done) {
       push(
@@ -286,7 +301,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         categories: useLocal ? local.categories : snapshot.categories,
         tags: useLocal ? local.tags : snapshot.tags,
         notifications: useLocal ? local.notifications : snapshot.notifications,
-        profile: hasPending ? (local.profile ?? snapshot.profile) : (snapshot.profile ?? local.profile),
+        profile: hasPending
+          ? (local.profile ?? snapshot.profile)
+          : (snapshot.profile ?? local.profile),
         settings: snapshot.settings,
       };
 
@@ -467,7 +484,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [userId],
   );
 
-
   const value = useMemo<StoreValue>(() => {
     const now = () => new Date().toISOString();
 
@@ -642,7 +658,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }));
         if (next) persistProject(next, before);
       },
-
 
       createCategory: (name, color) =>
         patch((p) => ({
