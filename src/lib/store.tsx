@@ -24,7 +24,15 @@ import {
 import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
 import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects } from "./cloud";
-import { toggleAssignedStage, notifyStageChanges } from "./collab.functions";
+import {
+  toggleAssignedStage,
+  notifyStageChanges,
+  createOwnedProject,
+  saveOwnedProject,
+  deleteOwnedProject,
+  type ProjectWriteInput,
+} from "./collab.functions";
+
 import { pendingCount, flushQueue } from "./sync-queue";
 import { deriveProjectStatus, mergeOwnedProject, mergeSharedStages } from "./access";
 
@@ -165,7 +173,10 @@ function buildNotifications(tasks: Task[], existing: AppNotification[], reminder
 type Notice = { memberUserId: string; title: string; message: string };
 
 /** Builds in-app/push notices for stage assignment, date and status changes. */
-function stageNotices(before: Project, after: Pick<Project, "stages" | "members" | "title">): Notice[] {
+function stageNotices(
+  before: Project,
+  after: Pick<Project, "stages" | "members" | "title">,
+): Notice[] {
   const out: Notice[] = [];
   const userIdOf = (memberId?: string | null) =>
     (after.members ?? []).find((m) => m.id === memberId)?.userId ?? null;
@@ -178,14 +189,26 @@ function stageNotices(before: Project, after: Pick<Project, "stages" | "members"
     const old = (before.stages ?? []).find((x) => x.id === st.id);
     const project = after.title;
     if (!old || old.assigneeId !== st.assigneeId) {
-      push(st.assigneeId, "مرحله به شما اختصاص یافت", `مرحله «${st.title}» در پروژه «${project}» به شما سپرده شد.`);
+      push(
+        st.assigneeId,
+        "مرحله به شما اختصاص یافت",
+        `مرحله «${st.title}» در پروژه «${project}» به شما سپرده شد.`,
+      );
       if (old?.assigneeId && old.assigneeId !== st.assigneeId) {
-        push(old.assigneeId, "تغییر مسئول مرحله", `مسئولیت مرحله «${st.title}» در پروژه «${project}» به فرد دیگری منتقل شد.`);
+        push(
+          old.assigneeId,
+          "تغییر مسئول مرحله",
+          `مسئولیت مرحله «${st.title}» در پروژه «${project}» به فرد دیگری منتقل شد.`,
+        );
       }
       continue;
     }
     if ((old.dueDate ?? null) !== (st.dueDate ?? null)) {
-      push(st.assigneeId, "تغییر مهلت مرحله", `مهلت مرحله «${st.title}» در پروژه «${project}» تغییر کرد.`);
+      push(
+        st.assigneeId,
+        "تغییر مهلت مرحله",
+        `مهلت مرحله «${st.title}» در پروژه «${project}» تغییر کرد.`,
+      );
     }
     if (old.done !== st.done) {
       push(
@@ -278,7 +301,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         categories: useLocal ? local.categories : snapshot.categories,
         tags: useLocal ? local.tags : snapshot.tags,
         notifications: useLocal ? local.notifications : snapshot.notifications,
-        profile: hasPending ? (local.profile ?? snapshot.profile) : (snapshot.profile ?? local.profile),
+        profile: hasPending
+          ? (local.profile ?? snapshot.profile)
+          : (snapshot.profile ?? local.profile),
         settings: snapshot.settings,
       };
 
@@ -397,7 +422,67 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   }, [ready, userId, refreshCollab]);
 
+  /** Serialises a local project into the server write contract. */
+  const toWrite = useCallback(
+    (p: Project): ProjectWriteInput => ({
+      id: p.id,
+      title: p.title,
+      description: p.description ?? "",
+      status: p.status,
+      priority: p.priority,
+      categoryId: p.categoryId,
+      tagIds: p.tagIds ?? [],
+      dueDate: p.dueDate,
+      members: p.members ?? [],
+      stages: p.stages ?? [],
+      createdAt: p.createdAt,
+    }),
+    [],
+  );
 
+  const restore = useCallback((previous: Project | null, id: string) => {
+    setData((prev) => ({
+      ...prev,
+      projects: previous
+        ? prev.projects.map((p) => (p.id === id ? previous : p))
+        : prev.projects.filter((p) => p.id !== id),
+    }));
+  }, []);
+
+  const failed = useCallback(
+    (e: unknown, previous: Project | null, id: string) => {
+      restore(previous, id);
+      toast.error(e instanceof Error ? e.message : "ذخیرهٔ پروژه در سرور ناموفق بود");
+    },
+    [restore],
+  );
+
+  /** Persists an owned project to the cloud; rolls the local state back on failure. */
+  const persistProject = useCallback(
+    (next: Project, previous: Project | null, isNew = false) => {
+      if (!userId || next.readOnly) return;
+      const call = isNew
+        ? createOwnedProject({ data: toWrite(next) })
+        : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
+      void call.catch((e: unknown) => failed(e, previous, next.id));
+    },
+    [userId, toWrite, failed],
+  );
+
+  const removeProject = useCallback(
+    (previous: Project) => {
+      if (!userId || previous.readOnly) return;
+      void deleteOwnedProject({ data: { projectId: previous.id } }).catch((e: unknown) => {
+        setData((prev) =>
+          prev.projects.some((p) => p.id === previous.id)
+            ? prev
+            : { ...prev, projects: [previous, ...prev.projects] },
+        );
+        toast.error(e instanceof Error ? e.message : "حذف پروژه در سرور ناموفق بود");
+      });
+    },
+    [userId],
+  );
 
   const value = useMemo<StoreValue>(() => {
     const now = () => new Date().toISOString();
@@ -478,6 +563,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           completedAt: input.status === "COMPLETED" ? now() : null,
         };
         patch((p) => ({ ...p, projects: [project, ...p.projects] }));
+        persistProject(project, null, true);
         return project;
       },
       updateProject: (id, p2) => {
@@ -492,41 +578,51 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }),
           );
         }
+        let next: Project | null = null;
         patch((p) => ({
           ...p,
-          projects: p.projects.map((pr) =>
-            pr.id === id
-              ? {
-                  ...pr,
-                  ...p2,
-                  updatedAt: now(),
-                  completedAt:
-                    p2.status === "COMPLETED"
-                      ? (pr.completedAt ?? now())
-                      : p2.status
-                        ? null
-                        : pr.completedAt,
-                }
-              : pr,
-          ),
+          projects: p.projects.map((pr) => {
+            if (pr.id !== id) return pr;
+            next = {
+              ...pr,
+              ...p2,
+              updatedAt: now(),
+              completedAt:
+                p2.status === "COMPLETED"
+                  ? (pr.completedAt ?? now())
+                  : p2.status
+                    ? null
+                    : pr.completedAt,
+            };
+            return next;
+          }),
         }));
+        if (next) persistProject(next, before ?? null);
       },
-      deleteProject: (id) =>
-        patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) })),
-      setProjectStatus: (id, status) =>
+      deleteProject: (id) => {
+        const before = data.projects.find((pr) => pr.id === id);
+        patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) }));
+        if (before) removeProject(before);
+      },
+      setProjectStatus: (id, status) => {
+        const before = data.projects.find((pr) => pr.id === id);
+        let next: Project | null = null;
         patch((p) => ({
           ...p,
-          projects: p.projects.map((pr) =>
-            pr.id === id
-              ? {
-                  ...pr,
-                  status,
-                  completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
-                  updatedAt: now(),
-                }
-              : pr,
-          ),
-        })),
+          projects: p.projects.map((pr) => {
+            if (pr.id !== id) return pr;
+            next = {
+              ...pr,
+              status,
+              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
+              updatedAt: now(),
+            };
+            return next;
+          }),
+        }));
+        if (next) persistProject(next, before ?? null);
+      },
+
       refreshCollab,
       toggleStage: (projectId, stageId) => {
         const target = data.projects.find((p) => p.id === projectId);
@@ -539,6 +635,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             );
           return;
         }
+        const before = target ?? null;
+        let next: Project | null = null;
         patch((p) => ({
           ...p,
           projects: p.projects.map((pr) => {
@@ -548,15 +646,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             );
             sendNotices(pr.id, stageNotices(pr, { ...pr, stages }));
             const status = deriveProjectStatus(stages, pr.status);
-            return {
+            next = {
               ...pr,
               stages,
               status,
               completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
               updatedAt: now(),
             };
+            return next;
           }),
         }));
+        if (next) persistProject(next, before);
       },
 
       createCategory: (name, color) =>
@@ -645,7 +745,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       resetAll: () => setData(emptyData),
     };
-  }, [data, ready, patch, refreshCollab]);
+  }, [data, ready, patch, refreshCollab, persistProject, removeProject]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
