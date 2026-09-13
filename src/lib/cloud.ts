@@ -171,7 +171,7 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
   };
 }
 
-type SyncTable = "tasks" | "categories" | "tags" | "notifications";
+type SyncTable = "categories" | "tags" | "notifications";
 type Row = { id: string } & Record<string, unknown>;
 
 /** Cache of the last synced row shapes so we only send what actually changed. */
@@ -194,20 +194,6 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
     cacheUserId = userId;
   }
 
-  const tasks: Row[] = data.tasks.map((t) => ({
-    user_id: userId,
-    id: t.id,
-    title: t.title,
-    description: t.description ?? "",
-    status: t.status,
-    priority: t.priority,
-    category_id: t.categoryId,
-    tag_ids: t.tagIds ?? [],
-    due_date: t.dueDate,
-    created_at: t.createdAt,
-    updated_at: t.updatedAt,
-    completed_at: t.completedAt,
-  }));
   const categories: Row[] = data.categories.map((c) => ({
     user_id: userId,
     id: c.id,
@@ -233,7 +219,6 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
   }));
 
   const batches: [SyncTable, Row[]][] = [
-    ["tasks", tasks],
     ["categories", categories],
     ["tags", tags],
     ["notifications", notifications],

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type SyncTable = "tasks" | "categories" | "tags" | "notifications" | "profiles";
+export type SyncTable = "categories" | "tags" | "notifications" | "profiles";
 
 export type SyncOp =
   | { key: string; table: SyncTable; kind: "upsert"; row: Record<string, unknown> }
@@ -15,7 +15,7 @@ const queueKey = (userId: string) => `${QUEUE_PREFIX}::${userId}`;
 const queues = new Map<string, SyncOp[]>();
 const flushing = new Set<string>();
 const timers = new Map<string, number>();
-let onlineHooked = false;
+const onlineUsers = new Set<string>();
 
 function read(userId: string): SyncOp[] {
   const cached = queues.get(userId);
@@ -107,8 +107,8 @@ function scheduleRetry(userId: string, delay: number) {
 }
 
 function hookOnline(userId: string) {
-  if (onlineHooked || typeof window === "undefined") return;
-  onlineHooked = true;
+  if (onlineUsers.has(userId) || typeof window === "undefined") return;
+  onlineUsers.add(userId);
   window.addEventListener("online", () => void flushQueue(userId));
 }
 

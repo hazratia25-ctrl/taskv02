@@ -30,7 +30,11 @@ import {
   createOwnedProject,
   saveOwnedProject,
   deleteOwnedProject,
+  createOwnedTask,
+  saveOwnedTask,
+  deleteOwnedTask,
   type ProjectWriteInput,
+  type TaskWriteInput,
 } from "./collab.functions";
 
 import { pendingCount, flushQueue } from "./sync-queue";
@@ -94,16 +98,16 @@ export interface ProjectInput {
 
 interface StoreValue extends AppData {
   ready: boolean;
-  createTask: (input: TaskInput) => Task;
-  updateTask: (id: string, patch: Partial<TaskInput>) => void;
-  deleteTask: (id: string) => void;
-  toggleComplete: (id: string) => void;
-  setTaskStatus: (id: string, status: TaskStatus) => void;
-  createProject: (input: ProjectInput) => Project;
-  updateProject: (id: string, patch: Partial<ProjectInput>) => void;
-  deleteProject: (id: string) => void;
-  setProjectStatus: (id: string, status: TaskStatus) => void;
-  toggleStage: (projectId: string, stageId: string) => void;
+  createTask: (input: TaskInput) => Promise<Task>;
+  updateTask: (id: string, patch: Partial<TaskInput>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  toggleComplete: (id: string) => Promise<void>;
+  setTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
+  createProject: (input: ProjectInput) => Promise<Project>;
+  updateProject: (id: string, patch: Partial<ProjectInput>) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+  setProjectStatus: (id: string, status: TaskStatus) => Promise<void>;
+  toggleStage: (projectId: string, stageId: string) => Promise<void>;
   /** Re-pulls shared projects and owner-side stage updates from the cloud. */
   refreshCollab: () => Promise<void>;
   createCategory: (name: string, color: string) => void;
@@ -422,6 +426,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   }, [ready, userId, refreshCollab]);
 
+  useEffect(() => {
+    if (!ready || !userId) return;
+    let refreshTimer: number | undefined;
+    const requestRefresh = () => {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => void refreshCollab(), 120);
+    };
+    const channel = supabase
+      .channel(`collab:${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, requestRefresh)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "project_members" },
+        requestRefresh,
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") requestRefresh();
+      });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshCollab();
+    };
+    const onOnline = () => void refreshCollab();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
+    return () => {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
+      void supabase.removeChannel(channel);
+    };
+  }, [ready, userId, refreshCollab]);
+
   /** Serialises a local project into the server write contract. */
   const toWrite = useCallback(
     (p: Project): ProjectWriteInput => ({
@@ -459,27 +495,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   /** Persists an owned project to the cloud; rolls the local state back on failure. */
   const persistProject = useCallback(
-    (next: Project, previous: Project | null, isNew = false) => {
-      if (!userId || next.readOnly) return;
+    async (next: Project, previous: Project | null, isNew = false) => {
+      if (!userId || next.readOnly) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
       const call = isNew
         ? createOwnedProject({ data: toWrite(next) })
         : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
-      void call.catch((e: unknown) => failed(e, previous, next.id));
+      try {
+        await call;
+        await refreshCollab();
+      } catch (e) {
+        failed(e, previous, next.id);
+        throw e;
+      }
     },
-    [userId, toWrite, failed],
+    [userId, toWrite, failed, refreshCollab],
   );
 
   const removeProject = useCallback(
-    (previous: Project) => {
-      if (!userId || previous.readOnly) return;
-      void deleteOwnedProject({ data: { projectId: previous.id } }).catch((e: unknown) => {
+    async (previous: Project) => {
+      if (!userId || previous.readOnly) throw new Error("دسترسی حذف پروژه ندارید.");
+      try {
+        await deleteOwnedProject({ data: { projectId: previous.id } });
+      } catch (e) {
         setData((prev) =>
           prev.projects.some((p) => p.id === previous.id)
             ? prev
             : { ...prev, projects: [previous, ...prev.projects] },
         );
         toast.error(e instanceof Error ? e.message : "حذف پروژه در سرور ناموفق بود");
-      });
+        throw e;
+      }
     },
     [userId],
   );
@@ -490,7 +535,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return {
       ...data,
       ready,
-      createTask: (input) => {
+      createTask: async (input) => {
         const task: Task = {
           id: uid(),
           ...input,
@@ -499,62 +544,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           completedAt: input.status === "COMPLETED" ? now() : null,
         };
         patch((p) => ({ ...p, tasks: [task, ...p.tasks] }));
-        return task;
+        try {
+          await createOwnedTask({ data: task as TaskWriteInput });
+          return task;
+        } catch (e) {
+          patch((p) => ({ ...p, tasks: p.tasks.filter((t) => t.id !== task.id) }));
+          toast.error(e instanceof Error ? e.message : "ذخیرهٔ وظیفه ناموفق بود");
+          throw e;
+        }
       },
-      updateTask: (id, p2) =>
+      updateTask: async (id, p2) => {
+        const before = data.tasks.find((t) => t.id === id);
+        if (!before) throw new Error("وظیفه یافت نشد.");
+        const next = { ...before, ...p2, updatedAt: now(), completedAt: p2.status === "COMPLETED" ? (before.completedAt ?? now()) : p2.status ? null : before.completedAt };
         patch((p) => ({
           ...p,
-          tasks: p.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  ...p2,
-                  updatedAt: now(),
-                  completedAt:
-                    p2.status === "COMPLETED"
-                      ? (t.completedAt ?? now())
-                      : p2.status
-                        ? null
-                        : t.completedAt,
-                }
-              : t,
-          ),
-        })),
-      deleteTask: (id) =>
+          tasks: p.tasks.map((t) => (t.id === id ? next : t)),
+        }));
+        try { await saveOwnedTask({ data: { taskId: id, patch: next as TaskWriteInput } }); }
+        catch (e) { patch((p) => ({ ...p, tasks: p.tasks.map((t) => t.id === id ? before : t) })); toast.error("ذخیرهٔ وظیفه ناموفق بود"); throw e; }
+      },
+      deleteTask: async (id) => {
+        const before = data.tasks.find((t) => t.id === id);
+        const notices = data.notifications.filter((n) => n.taskId === id);
         patch((p) => ({
           ...p,
           tasks: p.tasks.filter((t) => t.id !== id),
           notifications: p.notifications.filter((n) => n.taskId !== id),
-        })),
-      toggleComplete: (id) =>
-        patch((p) => ({
-          ...p,
-          tasks: p.tasks.map((t) => {
-            if (t.id !== id) return t;
-            const completed = t.status !== "COMPLETED";
-            return {
-              ...t,
-              status: statusFromCompletion(t.status, completed),
-              completedAt: completed ? now() : null,
-              updatedAt: now(),
-            };
-          }),
-        })),
-      setTaskStatus: (id, status) =>
-        patch((p) => ({
-          ...p,
-          tasks: p.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  status,
-                  completedAt: status === "COMPLETED" ? (t.completedAt ?? now()) : null,
-                  updatedAt: now(),
-                }
-              : t,
-          ),
-        })),
-      createProject: (input) => {
+        }));
+        try { await deleteOwnedTask({ data: { taskId: id } }); }
+        catch (e) { if (before) patch((p) => ({ ...p, tasks: [before, ...p.tasks], notifications: [...notices, ...p.notifications] })); toast.error("حذف وظیفه ناموفق بود"); throw e; }
+      },
+      toggleComplete: async (id) => {
+        const task = data.tasks.find((t) => t.id === id);
+        if (!task) return;
+        await value.updateTask(id, { status: statusFromCompletion(task.status, task.status !== "COMPLETED") });
+      },
+      setTaskStatus: async (id, status) => { await value.updateTask(id, { status }); },
+      createProject: async (input) => {
         const project: Project = {
           id: uid(),
           ...input,
@@ -563,10 +590,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           completedAt: input.status === "COMPLETED" ? now() : null,
         };
         patch((p) => ({ ...p, projects: [project, ...p.projects] }));
-        persistProject(project, null, true);
+        await persistProject(project, null, true);
         return project;
       },
-      updateProject: (id, p2) => {
+      updateProject: async (id, p2) => {
         const before = data.projects.find((pr) => pr.id === id);
         if (before && !before.readOnly && p2.stages) {
           sendNotices(
@@ -597,14 +624,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             return next;
           }),
         }));
-        if (next) persistProject(next, before ?? null);
+        if (next) await persistProject(next, before ?? null);
       },
-      deleteProject: (id) => {
+      deleteProject: async (id) => {
         const before = data.projects.find((pr) => pr.id === id);
         patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) }));
-        if (before) removeProject(before);
+        if (before) await removeProject(before);
       },
-      setProjectStatus: (id, status) => {
+      setProjectStatus: async (id, status) => {
         const before = data.projects.find((pr) => pr.id === id);
         let next: Project | null = null;
         patch((p) => ({
@@ -620,19 +647,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             return next;
           }),
         }));
-        if (next) persistProject(next, before ?? null);
+        if (next) await persistProject(next, before ?? null);
       },
 
       refreshCollab,
-      toggleStage: (projectId, stageId) => {
+      toggleStage: async (projectId, stageId) => {
         const target = data.projects.find((p) => p.id === projectId);
         if (target?.readOnly) {
           // shared project: only the assigned member may tick, and only on the server
-          void toggleAssignedStage({ data: { projectId, stageId } })
-            .then(() => refreshCollab())
-            .catch((e: unknown) =>
-              toast.error(e instanceof Error ? e.message : "به‌روزرسانی مرحله ناموفق بود"),
-            );
+          try { await toggleAssignedStage({ data: { projectId, stageId } }); await refreshCollab(); }
+          catch (e) { toast.error(e instanceof Error ? e.message : "به‌روزرسانی مرحله ناموفق بود"); throw e; }
           return;
         }
         const before = target ?? null;
@@ -656,7 +680,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             return next;
           }),
         }));
-        if (next) persistProject(next, before);
+        if (next) await persistProject(next, before);
       },
 
       createCategory: (name, color) =>
@@ -710,7 +734,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       saveProfile: (profile) =>
         patch((p) => ({
           ...p,
-          profile: { ...profile, createdAt: p.profile?.createdAt ?? now() },
+          profile: { ...p.profile, ...profile, createdAt: p.profile?.createdAt ?? now() },
         })),
       updateSettings: (p2) => patch((p) => ({ ...p, settings: { ...p.settings, ...p2 } })),
       exportData: () => JSON.stringify(data, null, 2),

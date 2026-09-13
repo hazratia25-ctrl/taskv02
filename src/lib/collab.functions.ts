@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { ProjectMember, ProjectStage } from "./types";
+import type { ProjectMember, ProjectStage, TaskPriority, TaskStatus } from "./types";
 
 export interface FoundUser {
   id: string;
@@ -36,6 +36,69 @@ export interface ProjectWriteInput {
   stages: unknown[];
   createdAt?: string;
 }
+
+export interface TaskWriteInput {
+  id?: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  categoryId: string | null;
+  tagIds: string[];
+  dueDate: string | null;
+  createdAt?: string;
+}
+
+/** Creates a task with ownership derived only from the verified session. */
+export const createOwnedTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: TaskWriteInput) => data)
+  .handler(async ({ data, context }) => {
+    const timestamp = new Date().toISOString();
+    const { data: row, error } = await context.supabase
+      .from("tasks")
+      .insert({
+        id: data.id || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+        user_id: context.userId,
+        title: String(data.title).slice(0, 300),
+        description: String(data.description ?? ""),
+        status: data.status,
+        priority: data.priority,
+        category_id: data.categoryId,
+        tag_ids: data.tagIds ?? [],
+        due_date: data.dueDate,
+        created_at: data.createdAt ?? timestamp,
+        updated_at: timestamp,
+        completed_at: data.status === "COMPLETED" ? timestamp : null,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const saveOwnedTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { taskId: string; patch: TaskWriteInput }) => data)
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.rpc("save_owned_task_atomic", {
+      _task_id: data.taskId,
+      _patch: data.patch as never,
+    });
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deleteOwnedTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { taskId: string }) => ({ taskId: String(data.taskId) }))
+  .handler(async ({ data, context }) => {
+    const { data: deleted, error } = await context.supabase.rpc("delete_owned_task_atomic", {
+      _task_id: data.taskId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: deleted === true };
+  });
 
 /** Creates an owned project with ownership derived only from the verified session. */
 export const createOwnedProject = createServerFn({ method: "POST" })
@@ -81,19 +144,16 @@ export const saveOwnedProject = createServerFn({ method: "POST" })
     return row;
   });
 
-/** Deletes an owned project (ownership enforced by RLS on user_id). */
+/** Atomically deletes an owned project and its membership rows. */
 export const deleteOwnedProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { projectId: string }) => ({ projectId: String(data.projectId) }))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("projects")
-      .delete()
-      .eq("id", data.projectId)
-      .eq("user_id", context.userId);
+    const { data: deleted, error } = await context.supabase.rpc("delete_owned_project_atomic", {
+      _project_id: data.projectId,
+    });
     if (error) throw new Error(error.message);
-    await context.supabase.from("project_members").delete().eq("project_id", data.projectId);
-    return { ok: true };
+    return { ok: deleted === true };
   });
 
 const nid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;

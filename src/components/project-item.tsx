@@ -23,7 +23,6 @@ import type { Project } from "@/lib/types";
 import { fa, formatJalali, relativeDue } from "@/lib/jalali";
 import { PriorityBadge, StatusBadge } from "./task-item";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 /** Shows the real account picture when the member is a signed-up user. */
 export function MemberAvatar({
@@ -188,7 +187,7 @@ export function ProjectItem({
                 <Checkbox
                   checked={st.done}
                   disabled={!allowed}
-                  onCheckedChange={() => toggleStage(project.id, st.id)}
+                  onCheckedChange={() => void toggleStage(project.id, st.id)}
                   aria-label="تکمیل مرحله"
                 />
                 <span className={cn("text-sm", st.done && "text-muted-foreground line-through")}>
@@ -236,10 +235,7 @@ export function ProjectItem({
           <AlertDialogFooter className="gap-2 sm:justify-start">
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                deleteProject(project.id);
-                toast.success("پروژه حذف شد");
-              }}
+              onClick={() => void deleteProject(project.id)}
             >
               حذف
             </AlertDialogAction>
