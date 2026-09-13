@@ -59,6 +59,7 @@ export function TaskDialog({
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState("");
   const [kind, setKind] = useState<"task" | "project">("task");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -115,23 +116,26 @@ export function TaskDialog({
     setError("");
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.title.trim().length < 2) {
       setError("عنوان وظیفه را وارد کنید.");
       return;
     }
     try {
+      setSaving(true);
       if (task) {
-        updateTask(task.id, { ...form, title: form.title.trim() });
+        await updateTask(task.id, { ...form, title: form.title.trim() });
         toast.success("وظیفه به‌روزرسانی شد");
       } else {
-        createTask({ ...form, title: form.title.trim() });
+        await createTask({ ...form, title: form.title.trim() });
         toast.success("وظیفه ایجاد شد");
       }
       onOpenChange(false);
     } catch {
       toast.error("ذخیره‌سازی ناموفق بود");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -344,7 +348,7 @@ export function TaskDialog({
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <DialogFooter className="gap-2 sm:justify-start">
-                <Button type="submit">{task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
+                <Button type="submit" disabled={saving}>{saving ? "در حال ذخیره…" : task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
                 <div className="flex flex-1 gap-2">
                   <Button
                     type="button"

@@ -91,6 +91,7 @@ export function ProjectFormBody({
   const [stageTitle, setStageTitle] = useState("");
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setForm(project ? fromProject(project) : emptyForm(defaultDueDate));
@@ -139,7 +140,7 @@ export function ProjectFormBody({
     setNewTag("");
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.title.trim().length < 2) {
       setError("عنوان پروژه را وارد کنید.");
@@ -157,12 +158,13 @@ export function ProjectFormBody({
       status: deriveProjectStatus(stages, form.status),
     };
     try {
+      setSaving(true);
       let projectId = project?.id ?? "";
       if (project) {
-        updateProject(project.id, payload);
+        await updateProject(project.id, payload);
         toast.success("پروژه به‌روزرسانی شد");
       } else {
-        projectId = createProject(payload).id;
+        projectId = (await createProject(payload)).id;
         toast.success("پروژه ایجاد شد");
       }
       // real accounts added through search get a server-side invitation
@@ -184,6 +186,8 @@ export function ProjectFormBody({
       onDone();
     } catch {
       toast.error("ذخیره‌سازی ناموفق بود");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -543,7 +547,7 @@ export function ProjectFormBody({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <DialogFooter className="gap-2 sm:justify-start">
-        <Button type="submit">{project ? "ذخیره تغییرات" : "ایجاد پروژه"}</Button>
+        <Button type="submit" disabled={saving}>{saving ? "در حال ذخیره…" : project ? "ذخیره تغییرات" : "ایجاد پروژه"}</Button>
         <div className="flex flex-1 gap-2">
           <Button type="button" variant="destructive" className="w-1/2" onClick={onDone}>
             انصراف

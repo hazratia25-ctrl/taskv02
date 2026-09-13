@@ -19,7 +19,6 @@ import { isOverdue, useStore } from "@/lib/store";
 import { PRIORITY_LABELS, STATUS_LABELS, type Task } from "@/lib/types";
 import { formatJalali, relativeDue } from "@/lib/jalali";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 export function PriorityBadge({ priority }: { priority: Task["priority"] }) {
   return (
@@ -64,7 +63,7 @@ export function TaskItem({ task, onEdit }: { task: Task; onEdit: (t: Task) => vo
       <div className="flex items-start gap-3">
         <Checkbox
           checked={task.status === "COMPLETED"}
-          onCheckedChange={() => toggleComplete(task.id)}
+          onCheckedChange={() => void toggleComplete(task.id)}
           className="mt-1"
           aria-label="تغییر وضعیت تکمیل"
         />
@@ -145,10 +144,7 @@ export function TaskItem({ task, onEdit }: { task: Task; onEdit: (t: Task) => vo
               <AlertDialogFooter className="gap-2 sm:justify-start">
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => {
-                    deleteTask(task.id);
-                    toast.success("وظیفه حذف شد");
-                  }}
+                  onClick={() => void deleteTask(task.id)}
                 >
                   حذف
                 </AlertDialogAction>

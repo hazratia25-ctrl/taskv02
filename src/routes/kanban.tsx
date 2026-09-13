@@ -55,24 +55,24 @@ function KanbanPage() {
     return map;
   }, [projects]);
 
-  const dropProject = (status: TaskStatus) => {
+  const dropProject = async (status: TaskStatus) => {
     setOverColumn(null);
     if (!dragging) return;
     const project = projects.find((p) => p.id === dragging);
     setDragging(null);
     if (!project || project.status === status) return;
-    setProjectStatus(project.id, status);
+    await setProjectStatus(project.id, status);
     toast.success(`پروژه «${project.title}» به ${STATUS_LABELS[status]} منتقل شد`);
   };
 
-  const drop = (status: TaskStatus) => {
+  const drop = async (status: TaskStatus) => {
     setOverColumn(null);
     if (!dragging) return;
     const task = tasks.find((t) => t.id === dragging);
     setDragging(null);
     if (!task || task.status === status) return;
     try {
-      setTaskStatus(task.id, status);
+      await setTaskStatus(task.id, status);
       toast.success(`«${task.title}» به ${STATUS_LABELS[status]} منتقل شد`);
     } catch {
       toast.error("جابه‌جایی ذخیره نشد؛ وضعیت قبلی بازگردانده شد.");
@@ -110,7 +110,7 @@ function KanbanPage() {
               setOverColumn(status);
             }}
             onDragLeave={() => setOverColumn((c) => (c === status ? null : c))}
-            onDrop={() => (scope === "tasks" ? drop(status) : dropProject(status))}
+            onDrop={() => void (scope === "tasks" ? drop(status) : dropProject(status))}
             className={cn(
               "rounded-2xl border bg-sidebar p-3 transition-colors",
               overColumn === status && "border-primary bg-primary/5",
@@ -152,7 +152,7 @@ function KanbanPage() {
                         size="icon"
                         variant="ghost"
                         aria-label="انتقال به ستون بعدی"
-                        onClick={() => setProjectStatus(project.id, NEXT[project.status])}
+                        onClick={() => void setProjectStatus(project.id, NEXT[project.status])}
                       >
                         <ArrowLeftRight className="size-4" />
                       </Button>
@@ -249,7 +249,7 @@ function KanbanPage() {
                           size="icon"
                           variant="ghost"
                           aria-label="انتقال به ستون بعدی"
-                          onClick={() => setTaskStatus(task.id, NEXT[task.status])}
+                          onClick={() => void setTaskStatus(task.id, NEXT[task.status])}
                         >
                           <ArrowLeftRight className="size-4" />
                         </Button>
