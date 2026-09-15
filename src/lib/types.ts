@@ -120,7 +120,6 @@ export interface UserProfile {
   username?: string | null;
 }
 
-
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface AppSettings {

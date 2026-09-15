@@ -84,8 +84,6 @@ function CalendarPage() {
   const dayTasks = useMemo(() => tasksForDay(selected), [tasksForDay, selected]);
   const dayProjects = useMemo(() => projectsForDay(selected), [projectsForDay, selected]);
 
-
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -186,7 +184,6 @@ function CalendarPage() {
                   }}
                 />
               ))}
-
             </>
           )}
         </div>

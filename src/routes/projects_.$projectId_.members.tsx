@@ -28,11 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowRight, Plus, Trash2, Users, Search, Pencil, Check, X } from "lucide-react";
-import {
-  inviteProjectMember,
-  removeProjectMember,
-  type FoundUser,
-} from "@/lib/collab.functions";
+import { inviteProjectMember, removeProjectMember, type FoundUser } from "@/lib/collab.functions";
 import { MemberSearch } from "@/components/member-search";
 import { MemberAvatar } from "@/components/project-item";
 import { toast } from "sonner";
@@ -143,7 +139,10 @@ function MemberRow({
           <MemberAvatar name={member.name} avatar={member.avatar} className="size-9" />
           <span className="min-w-0">
             <span className="block truncate">{member.name || "بدون نام"}</span>
-            <span className="block truncate text-[11px] font-normal text-muted-foreground" dir="ltr">
+            <span
+              className="block truncate text-[11px] font-normal text-muted-foreground"
+              dir="ltr"
+            >
               {[member.userCode, member.username, member.phone].filter(Boolean).join(" · ")}
             </span>
           </span>
@@ -298,7 +297,6 @@ function MembersPage() {
     );
   }
 
-
   const members = project.members ?? [];
   const setMembers = (next: ProjectMember[]) => updateProject(project.id, { members: next });
 
@@ -338,7 +336,6 @@ function MembersPage() {
       <InviteRealUser project={project} members={members} setMembers={setMembers} />
 
       <div className="surface space-y-3 p-4">
-
         <p className="flex items-center gap-2 font-semibold">
           <Plus className="size-4 text-primary" /> افزودن عضو جدید
         </p>

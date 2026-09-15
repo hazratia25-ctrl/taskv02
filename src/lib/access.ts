@@ -71,7 +71,9 @@ export function mergeOwnedProject(local: Project, remote: Project): Project {
   const extraStages = remote.stages.filter((rs) => !local.stages.some((ls) => ls.id === rs.id));
 
   const members = local.members.map((lm) => {
-    const rm = remote.members.find((x) => x.id === lm.id || (!!lm.userId && x.userId === lm.userId));
+    const rm = remote.members.find(
+      (x) => x.id === lm.id || (!!lm.userId && x.userId === lm.userId),
+    );
     // invite answers (ACCEPTED/REJECTED) are written by the server, so they win
     return rm?.status && rm.status !== lm.status ? { ...lm, status: rm.status } : lm;
   });

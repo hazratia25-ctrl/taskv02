@@ -127,7 +127,6 @@ export function ProjectFormBody({
     setStageTitle("");
   };
 
-
   const addTag = () => {
     const name = newTag.trim();
     if (!name) return;
@@ -190,7 +189,6 @@ export function ProjectFormBody({
       setSaving(false);
     }
   };
-
 
   return (
     <form className="space-y-4" onSubmit={submit}>
@@ -547,7 +545,9 @@ export function ProjectFormBody({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <DialogFooter className="gap-2 sm:justify-start">
-        <Button type="submit" disabled={saving}>{saving ? "در حال ذخیره…" : project ? "ذخیره تغییرات" : "ایجاد پروژه"}</Button>
+        <Button type="submit" disabled={saving}>
+          {saving ? "در حال ذخیره…" : project ? "ذخیره تغییرات" : "ایجاد پروژه"}
+        </Button>
         <div className="flex flex-1 gap-2">
           <Button type="button" variant="destructive" className="w-1/2" onClick={onDone}>
             انصراف

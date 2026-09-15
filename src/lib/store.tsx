@@ -557,13 +557,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateTask: async (id, p2) => {
         const before = data.tasks.find((t) => t.id === id);
         if (!before) throw new Error("وظیفه یافت نشد.");
-        const next = { ...before, ...p2, updatedAt: now(), completedAt: p2.status === "COMPLETED" ? (before.completedAt ?? now()) : p2.status ? null : before.completedAt };
+        const next = {
+          ...before,
+          ...p2,
+          updatedAt: now(),
+          completedAt:
+            p2.status === "COMPLETED"
+              ? (before.completedAt ?? now())
+              : p2.status
+                ? null
+                : before.completedAt,
+        };
         patch((p) => ({
           ...p,
           tasks: p.tasks.map((t) => (t.id === id ? next : t)),
         }));
-        try { await saveOwnedTask({ data: { taskId: id, patch: next as TaskWriteInput } }); }
-        catch (e) { patch((p) => ({ ...p, tasks: p.tasks.map((t) => t.id === id ? before : t) })); toast.error("ذخیرهٔ وظیفه ناموفق بود"); throw e; }
+        try {
+          await saveOwnedTask({ data: { taskId: id, patch: next as TaskWriteInput } });
+        } catch (e) {
+          patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? before : t)) }));
+          toast.error("ذخیرهٔ وظیفه ناموفق بود");
+          throw e;
+        }
       },
       deleteTask: async (id) => {
         const before = data.tasks.find((t) => t.id === id);
@@ -573,15 +588,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           tasks: p.tasks.filter((t) => t.id !== id),
           notifications: p.notifications.filter((n) => n.taskId !== id),
         }));
-        try { await deleteOwnedTask({ data: { taskId: id } }); }
-        catch (e) { if (before) patch((p) => ({ ...p, tasks: [before, ...p.tasks], notifications: [...notices, ...p.notifications] })); toast.error("حذف وظیفه ناموفق بود"); throw e; }
+        try {
+          await deleteOwnedTask({ data: { taskId: id } });
+        } catch (e) {
+          if (before)
+            patch((p) => ({
+              ...p,
+              tasks: [before, ...p.tasks],
+              notifications: [...notices, ...p.notifications],
+            }));
+          toast.error("حذف وظیفه ناموفق بود");
+          throw e;
+        }
       },
       toggleComplete: async (id) => {
         const task = data.tasks.find((t) => t.id === id);
         if (!task) return;
-        await value.updateTask(id, { status: statusFromCompletion(task.status, task.status !== "COMPLETED") });
+        await value.updateTask(id, {
+          status: statusFromCompletion(task.status, task.status !== "COMPLETED"),
+        });
       },
-      setTaskStatus: async (id, status) => { await value.updateTask(id, { status }); },
+      setTaskStatus: async (id, status) => {
+        await value.updateTask(id, { status });
+      },
       createProject: async (input) => {
         const project: Project = {
           id: uid(),
@@ -656,8 +685,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const target = data.projects.find((p) => p.id === projectId);
         if (target?.readOnly) {
           // shared project: only the assigned member may tick, and only on the server
-          try { await toggleAssignedStage({ data: { projectId, stageId } }); await refreshCollab(); }
-          catch (e) { toast.error(e instanceof Error ? e.message : "به‌روزرسانی مرحله ناموفق بود"); throw e; }
+          try {
+            await toggleAssignedStage({ data: { projectId, stageId } });
+            await refreshCollab();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "به‌روزرسانی مرحله ناموفق بود");
+            throw e;
+          }
           return;
         }
         const before = target ?? null;

@@ -348,7 +348,9 @@ export function TaskDialog({
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <DialogFooter className="gap-2 sm:justify-start">
-                <Button type="submit" disabled={saving}>{saving ? "در حال ذخیره…" : task ? "ذخیره تغییرات" : "ایجاد وظیفه"}</Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "در حال ذخیره…" : task ? "ذخیره تغییرات" : "ایجاد وظیفه"}
+                </Button>
                 <div className="flex flex-1 gap-2">
                   <Button
                     type="button"

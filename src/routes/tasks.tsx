@@ -182,7 +182,6 @@ function TasksPage() {
         }
       />
 
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: "کل وظایف", value: fa(tasks.length) },
@@ -196,8 +195,6 @@ function TasksPage() {
           </div>
         ))}
       </div>
-
-
 
       <div className="surface space-y-4 p-4">
         <div className="relative">

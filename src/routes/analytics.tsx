@@ -420,15 +420,10 @@ function AnalyticsPage() {
 
       <div className="surface flex flex-wrap items-center justify-between gap-3 p-4">
         {scopePicker}
-        <Button
-          className="min-w-40"
-          onClick={exportPdf}
-          disabled={exporting || items.length === 0}
-        >
+        <Button className="min-w-40" onClick={exportPdf} disabled={exporting || items.length === 0}>
           <FileText className="size-4" /> {exporting ? "در حال آماده‌سازی…" : "گزارش PDF"}
         </Button>
       </div>
-
 
       {items.length === 0 ? (
         <EmptyState
