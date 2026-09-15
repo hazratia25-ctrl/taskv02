@@ -8,6 +8,13 @@
       "when": 1789282894022,
       "tag": "0000_harden_atomic_persistence",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789478140869,
+      "tag": "0001_harden_delete_project_indexes",
+      "breakpoints": true
     }
   ]
 }
