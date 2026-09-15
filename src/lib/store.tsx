@@ -23,6 +23,7 @@ import {
 } from "./types";
 import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects } from "./cloud";
 import {
   toggleAssignedStage,
