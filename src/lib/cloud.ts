@@ -120,7 +120,6 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
       }
     : null;
 
-
   const settings: AppSettings = {
     ...defaultSettings,
     ...((p?.settings as Partial<AppSettings> | null) ?? {}),
@@ -275,4 +274,3 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
   enqueue(userId, ops);
   await flushQueue(userId);
 }
-

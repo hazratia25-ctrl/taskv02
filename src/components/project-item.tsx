@@ -168,8 +168,8 @@ export function ProjectItem({
 
       {project.readOnly && (
         <p className="mt-3 rounded-xl bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground">
-          دسترسی شما در این پروژه محدود است: تنها می‌توانید مرحله‌ای را که به شما سپرده شده تیک بزنید؛
-          ویرایش پروژه و سایر مراحل «دسترسی ندارید».
+          دسترسی شما در این پروژه محدود است: تنها می‌توانید مرحله‌ای را که به شما سپرده شده تیک
+          بزنید؛ ویرایش پروژه و سایر مراحل «دسترسی ندارید».
         </p>
       )}
 
@@ -215,7 +215,6 @@ export function ProjectItem({
           })}
         </div>
       )}
-
 
       <div className="mt-4 space-y-2">
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

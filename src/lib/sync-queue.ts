@@ -80,7 +80,9 @@ async function sendBatch(batch: SyncOp[]) {
   }
 
   for (const [table, rows] of upserts) {
-    jobs.push(supabase.from(table).upsert(rows as never) as unknown as PromiseLike<{ error: unknown }>);
+    jobs.push(
+      supabase.from(table).upsert(rows as never) as unknown as PromiseLike<{ error: unknown }>,
+    );
   }
   for (const [table, ids] of deletes) {
     jobs.push(

@@ -9,7 +9,6 @@ import { STATUS_LABELS } from "@/lib/types";
 import { FolderKanban, Users, ListChecks, Clock, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -39,7 +38,6 @@ function Dashboard() {
   return (
     <div className="space-y-7">
       <PageHeader title="داشبورد" description="نمای کلی وضعیت وظایف و پروژه‌ها" />
-
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -83,7 +81,6 @@ function Dashboard() {
                     </span>
                   )}
                 </div>
-
               </Link>
             ))}
           </div>
@@ -135,7 +132,6 @@ function Dashboard() {
           </div>
         )}
       </section>
-
     </div>
   );
 }

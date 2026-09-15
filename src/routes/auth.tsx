@@ -134,7 +134,6 @@ function AuthPage() {
           </p>
         </div>
 
-
         <form className="space-y-4" onSubmit={submit}>
           {mode === "signup" && (
             <div className="space-y-2">
@@ -170,7 +169,9 @@ function AuthPage() {
               dir="ltr"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={mode === "signin" ? "name@example.com یا zahra.karimi" : "name@example.com"}
+              placeholder={
+                mode === "signin" ? "name@example.com یا zahra.karimi" : "name@example.com"
+              }
             />
           </div>
           <div className="space-y-2">

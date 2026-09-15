@@ -9,7 +9,6 @@ import { useStore } from "@/lib/store";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
@@ -99,10 +98,7 @@ function ProfilePage() {
           <p className="text-sm text-muted-foreground">{profile?.email || "بدون ایمیل"}</p>
           {(profile?.phone || profile?.extension) && (
             <p className="text-sm text-muted-foreground">
-              {[
-                profile?.phone ?? "",
-                profile?.extension ? `داخلی ${profile.extension}` : "",
-              ]
+              {[profile?.phone ?? "", profile?.extension ? `داخلی ${profile.extension}` : ""]
                 .filter(Boolean)
                 .join(" | ")}
             </p>
@@ -182,4 +178,3 @@ function ProfilePage() {
     </div>
   );
 }
-

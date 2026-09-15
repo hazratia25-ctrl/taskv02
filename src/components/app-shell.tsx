@@ -31,7 +31,6 @@ import {
 export const APP_NAME = "مدیریت وظایف و پروژه‌ها";
 
 const NAV = [
-
   { to: "/", label: "داشبورد", icon: LayoutDashboard },
   { to: "/tasks", label: "وظایف", icon: ListChecks },
   { to: "/projects", label: "پروژه‌ها", icon: FolderKanban },
@@ -88,10 +87,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-base font-bold leading-snug md:text-lg">
                 {[profile.role, profile.name].filter(Boolean).join(" | ")}
               </p>
-              <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm" dir="ltr">
+              <p
+                className="truncate text-xs leading-snug text-muted-foreground md:text-sm"
+                dir="ltr"
+              >
                 {[profile.username ? `@${profile.username}` : "", profile.userCode]
                   .filter(Boolean)
-                  .join(" · ") || profile.email || "بدون ایمیل"}
+                  .join(" · ") ||
+                  profile.email ||
+                  "بدون ایمیل"}
               </p>
               {(profile.phone || profile.extension) && (
                 <p className="truncate text-xs leading-snug text-muted-foreground md:text-sm">
@@ -106,11 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <Link
-            to="/"
-            className="hidden min-w-0 items-center gap-2 sm:flex"
-            aria-label={APP_NAME}
-          >
+          <Link to="/" className="hidden min-w-0 items-center gap-2 sm:flex" aria-label={APP_NAME}>
             <FolderKanban className="size-8 shrink-0 text-primary" strokeWidth={1.8} />
             <span className="truncate text-sm font-bold md:text-base">{APP_NAME}</span>
           </Link>
@@ -165,7 +165,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-
 
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-3 pb-24 pt-4 md:px-6 lg:pb-8">
         <aside className="sticky top-28 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col rounded-2xl border bg-sidebar p-3 lg:flex">
