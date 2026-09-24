@@ -601,7 +601,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (previous: Project) => {
       if (!userId || previous.readOnly) throw new Error("دسترسی حذف پروژه ندارید.");
       try {
+        collabSeq.current += 1; // drop snapshots that still contain the project
         await deleteOwnedProject({ data: { projectId: previous.id } });
+        collabSeq.current += 1;
       } catch (e) {
         setData((prev) =>
           prev.projects.some((p) => p.id === previous.id)
