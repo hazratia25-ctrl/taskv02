@@ -579,16 +579,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const persistProject = useCallback(
     async (next: Project, previous: Project | null, isNew = false) => {
       if (!userId || next.readOnly) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
+      pendingProjects.current.add(next.id);
       const call = isNew
         ? createOwnedProject({ data: toWrite(next) })
         : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
       try {
         await call;
-        await refreshCollab();
       } catch (e) {
+        pendingProjects.current.delete(next.id);
         failed(e, previous, next.id);
         throw e;
       }
+      pendingProjects.current.delete(next.id);
+      collabSeq.current += 1; // any fetch started before the write is now stale
+      await refreshCollab();
     },
     [userId, toWrite, failed, refreshCollab],
   );
