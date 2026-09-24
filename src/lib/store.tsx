@@ -382,80 +382,161 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const patch = useCallback((fn: (prev: AppData) => AppData) => setData(fn), []);
 
-  // pulls shared projects plus stage ticks made by invited members on owned projects
-  const refreshCollab = useCallback(async () => {
+  // ids with a write in flight: server snapshots must not drop or overwrite them yet
+  const pendingProjects = useRef(new Set<string>());
+  // single-flight refresh: at most one request running + one queued rerun
+  const collabInflight = useRef<Promise<void> | null>(null);
+  const collabRerun = useRef(false);
+  const collabSeq = useRef(0);
+
+  const runCollabFetch = useCallback(async () => {
     if (!userId || !hydrated.current) return;
-    try {
-      const [shared, owned] = await Promise.all([
-        fetchSharedProjects(userId),
-        fetchOwnedProjects(userId),
-      ]);
-      setData((prev) => ({
-        ...prev,
-        projects: [
-          ...prev.projects
-            .filter((p) => !p.readOnly)
-            .map((p) => {
-              const remote = owned.find((o) => o.id === p.id);
-              // merge instead of replace: member ticks and invite answers survive local edits
-              return remote ? mergeOwnedProject(p, remote) : p;
-            }),
-          ...shared.map((s) => {
-            const local = prev.projects.find((p) => p.id === s.id);
-            return local ? { ...s, stages: mergeSharedStages(local.stages, s.stages) } : s;
-          }),
-        ],
-      }));
-    } catch {
-      /* offline: keep whatever we have */
-    }
+    const seq = ++collabSeq.current;
+    const [shared, owned] = await Promise.all([
+      fetchSharedProjects(userId),
+      fetchOwnedProjects(userId),
+    ]);
+    // a newer fetch already started: this response is stale
+    if (seq !== collabSeq.current || syncUserId.current !== userId) return;
+    setData((prev) => {
+      const ownedLocal = prev.projects.filter((p) => !p.readOnly);
+      const ownedNext: Project[] = [];
+      for (const p of ownedLocal) {
+        const remote = owned.find((o) => o.id === p.id);
+        if (!remote) {
+          // deleted on the server (other device) unless a create is still in flight
+          if (pendingProjects.current.has(p.id)) ownedNext.push(p);
+          continue;
+        }
+        if (pendingProjects.current.has(p.id)) {
+          ownedNext.push(mergeOwnedProject(p, remote));
+        } else {
+          // server is authoritative once no local write is pending; keep newer local copy
+          ownedNext.push(remote.updatedAt >= p.updatedAt ? remote : mergeOwnedProject(p, remote));
+        }
+      }
+      for (const o of owned) if (!ownedLocal.some((p) => p.id === o.id)) ownedNext.push(o);
+      const sharedNext = shared.map((s) => {
+        const local = prev.projects.find((p) => p.id === s.id);
+        if (!local || s.updatedAt >= local.updatedAt) return s;
+        return { ...s, stages: mergeSharedStages(local.stages, s.stages) };
+      });
+      return { ...prev, projects: [...ownedNext, ...sharedNext] };
+    });
   }, [userId]);
 
-  useEffect(() => {
-    if (!ready || !userId) return;
-    // skip polling while the tab is in the background to keep the UI snappy
-    const tick = () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      void refreshCollab();
-    };
-    tick();
-    const t = window.setInterval(tick, 60_000);
-    document.addEventListener("visibilitychange", tick);
-    return () => {
-      window.clearInterval(t);
-      document.removeEventListener("visibilitychange", tick);
-    };
-  }, [ready, userId, refreshCollab]);
+  // pulls shared projects plus stage ticks made by invited members on owned projects
+  const refreshCollab = useCallback(async () => {
+    if (collabInflight.current) {
+      collabRerun.current = true;
+      return collabInflight.current;
+    }
+    const loop = (async () => {
+      try {
+        do {
+          collabRerun.current = false;
+          await runCollabFetch().catch(() => {
+            /* offline: keep whatever we have */
+          });
+        } while (collabRerun.current);
+      } finally {
+        collabInflight.current = null;
+      }
+    })();
+    collabInflight.current = loop;
+    return loop;
+  }, [runCollabFetch]);
 
+  // one realtime lifecycle per signed-in user: channel, reconnect backoff, fallback poll
   useEffect(() => {
     if (!ready || !userId) return;
-    let refreshTimer: number | undefined;
+    let disposed = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let debounce: number | undefined;
+    let retryTimer: number | undefined;
+    let pollTimer: number | undefined;
+    let attempt = 0;
+    let live = false;
+
     const requestRefresh = () => {
-      if (refreshTimer) window.clearTimeout(refreshTimer);
-      refreshTimer = window.setTimeout(() => void refreshCollab(), 120);
+      if (debounce) window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => void refreshCollab(), 120);
     };
-    const channel = supabase
-      .channel(`collab:${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, requestRefresh)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "project_members" },
-        requestRefresh,
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") requestRefresh();
+    const visible = () => document.visibilityState === "visible";
+
+    // polling only runs as a fallback while realtime is down
+    const schedulePoll = () => {
+      if (pollTimer) window.clearTimeout(pollTimer);
+      pollTimer = window.setTimeout(
+        () => {
+          if (!disposed && visible()) void refreshCollab();
+          schedulePoll();
+        },
+        live ? 5 * 60_000 : 20_000,
+      );
+    };
+
+    const connect = () => {
+      if (disposed) return;
+      if (channel) void supabase.removeChannel(channel);
+      const ch = supabase
+        .channel(`collab:${userId}:${Date.now()}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, requestRefresh)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "project_members" },
+          requestRefresh,
+        );
+      channel = ch;
+      ch.subscribe((status) => {
+        if (disposed || channel !== ch) return;
+        if (status === "SUBSCRIBED") {
+          attempt = 0;
+          live = true;
+          schedulePoll();
+          requestRefresh();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          live = false;
+          schedulePoll();
+          if (retryTimer) return;
+          const delay = Math.min(30_000, 1000 * 2 ** attempt) + Math.random() * 500;
+          attempt += 1;
+          retryTimer = window.setTimeout(() => {
+            retryTimer = undefined;
+            if (navigator.onLine !== false) connect();
+          }, delay);
+        }
       });
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void refreshCollab();
     };
-    const onOnline = () => void refreshCollab();
+
+    const onVisible = () => {
+      if (!visible()) return;
+      requestRefresh();
+      if (!live && !retryTimer) connect();
+    };
+    const onOnline = () => {
+      attempt = 0;
+      requestRefresh();
+      if (!live) {
+        if (retryTimer) window.clearTimeout(retryTimer);
+        retryTimer = undefined;
+        connect();
+      }
+    };
+
+    connect();
+    schedulePoll();
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onOnline);
     return () => {
-      if (refreshTimer) window.clearTimeout(refreshTimer);
+      disposed = true;
+      if (debounce) window.clearTimeout(debounce);
+      if (retryTimer) window.clearTimeout(retryTimer);
+      if (pollTimer) window.clearTimeout(pollTimer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
+      channel = null;
     };
   }, [ready, userId, refreshCollab]);
 
@@ -498,16 +579,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const persistProject = useCallback(
     async (next: Project, previous: Project | null, isNew = false) => {
       if (!userId || next.readOnly) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
+      pendingProjects.current.add(next.id);
       const call = isNew
         ? createOwnedProject({ data: toWrite(next) })
         : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
       try {
         await call;
-        await refreshCollab();
       } catch (e) {
+        pendingProjects.current.delete(next.id);
         failed(e, previous, next.id);
         throw e;
       }
+      pendingProjects.current.delete(next.id);
+      collabSeq.current += 1; // any fetch started before the write is now stale
+      await refreshCollab();
     },
     [userId, toWrite, failed, refreshCollab],
   );
@@ -516,7 +601,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (previous: Project) => {
       if (!userId || previous.readOnly) throw new Error("دسترسی حذف پروژه ندارید.");
       try {
+        collabSeq.current += 1; // drop snapshots that still contain the project
         await deleteOwnedProject({ data: { projectId: previous.id } });
+        collabSeq.current += 1;
       } catch (e) {
         setData((prev) =>
           prev.projects.some((p) => p.id === previous.id)
