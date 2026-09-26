@@ -383,7 +383,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const patch = useCallback((fn: (prev: AppData) => AppData) => setData(fn), []);
 
   // ids with a write in flight: server snapshots must not drop or overwrite them yet
-  const pendingProjects = useRef(new Set<string>());
+  const pendingProjects = useRef(new Map<string, number>());
   // single-flight refresh: at most one request running + one queued rerun
   const collabInflight = useRef<Promise<void> | null>(null);
   const collabRerun = useRef(false);
@@ -498,7 +498,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           live = false;
           schedulePoll();
-          if (retryTimer) return;
+          // bounded backoff: after 8 tries rely on the poll until online/visibility resets it
+          if (retryTimer || attempt >= 8) return;
           const delay = Math.min(30_000, 1000 * 2 ** attempt) + Math.random() * 500;
           attempt += 1;
           retryTimer = window.setTimeout(() => {
@@ -512,7 +513,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const onVisible = () => {
       if (!visible()) return;
       requestRefresh();
-      if (!live && !retryTimer) connect();
+      if (!live && !retryTimer) {
+        attempt = 0;
+        connect();
+      }
     };
     const onOnline = () => {
       attempt = 0;
@@ -579,18 +583,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const persistProject = useCallback(
     async (next: Project, previous: Project | null, isNew = false) => {
       if (!userId || next.readOnly) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
-      pendingProjects.current.add(next.id);
+      // counted, so overlapping writes to one project keep it pending until the last one settles
+      const pend = pendingProjects.current;
+      pend.set(next.id, (pend.get(next.id) ?? 0) + 1);
+      const settle = () => {
+        const n = (pend.get(next.id) ?? 1) - 1;
+        if (n <= 0) pend.delete(next.id);
+        else pend.set(next.id, n);
+      };
       const call = isNew
         ? createOwnedProject({ data: toWrite(next) })
         : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
       try {
         await call;
       } catch (e) {
-        pendingProjects.current.delete(next.id);
+        settle();
         failed(e, previous, next.id);
         throw e;
       }
-      pendingProjects.current.delete(next.id);
+      settle();
       collabSeq.current += 1; // any fetch started before the write is now stale
       await refreshCollab();
     },
