@@ -368,17 +368,32 @@ describe("mergeCollabSnapshot", () => {
   const T2 = "2026-01-01T00:00:02Z";
 
   test("newer remote wins by updated_at", () => {
-    const out = mergeCollabSnapshot([mk("a", T1)], [mk("a", T2, { title: "srv" })], [], () => false);
+    const out = mergeCollabSnapshot(
+      [mk("a", T1)],
+      [mk("a", T2, { title: "srv" })],
+      [],
+      () => false,
+    );
     expect(out[0].title).toBe("srv");
   });
 
   test("older remote does not overwrite newer local", () => {
-    const out = mergeCollabSnapshot([mk("a", T2, { title: "local" })], [mk("a", T1, { title: "old" })], [], () => false);
+    const out = mergeCollabSnapshot(
+      [mk("a", T2, { title: "local" })],
+      [mk("a", T1, { title: "old" })],
+      [],
+      () => false,
+    );
     expect(out[0].title).toBe("local");
   });
 
   test("pending save is never overwritten by snapshot", () => {
-    const out = mergeCollabSnapshot([mk("a", T1, { title: "editing" })], [mk("a", T2, { title: "srv" })], [], (id) => id === "a");
+    const out = mergeCollabSnapshot(
+      [mk("a", T1, { title: "editing" })],
+      [mk("a", T2, { title: "srv" })],
+      [],
+      (id) => id === "a",
+    );
     expect(out[0].title).toBe("editing");
   });
 
@@ -392,12 +407,19 @@ describe("mergeCollabSnapshot", () => {
 
   test("new remote owned + shared projects are added; revoked shared removed", () => {
     const local = [mk("gone", T1, { readOnly: true })];
-    const out = mergeCollabSnapshot(local, [mk("o", T1)], [mk("s", T1, { readOnly: true })], () => false);
+    const out = mergeCollabSnapshot(
+      local,
+      [mk("o", T1)],
+      [mk("s", T1, { readOnly: true })],
+      () => false,
+    );
     expect(out.map((p) => p.id)).toEqual(["o", "s"]);
   });
 
   test("shared: newer local tick kept when remote is older", () => {
-    const st = (done: boolean, doneAt: string) => [{ id: "st", title: "x", done, dueDate: null, doneAt }];
+    const st = (done: boolean, doneAt: string) => [
+      { id: "st", title: "x", done, dueDate: null, doneAt },
+    ];
     const local = [mk("s", T2, { readOnly: true, stages: st(true, T2) })];
     const remote = [mk("s", T1, { readOnly: true, stages: st(false, T1) })];
     expect(mergeCollabSnapshot(local, [], remote, () => false)[0].stages[0].done).toBe(true);
@@ -417,7 +439,9 @@ describe("tasks stay private", () => {
     };
     walk(join(import.meta.dir, "../src"));
     const channelFiles = files.filter((f) => /postgres_changes/.test(readFileSync(f, "utf8")));
-    expect(channelFiles.map((f) => f.replace(/.*src\//, "src/"))).toEqual(["src/lib/realtime-sync.ts"]);
+    expect(channelFiles.map((f) => f.replace(/.*src\//, "src/"))).toEqual([
+      "src/lib/realtime-sync.ts",
+    ]);
     for (const f of files) {
       expect(readFileSync(f, "utf8")).not.toMatch(/table:\s*["']tasks["']/);
     }
