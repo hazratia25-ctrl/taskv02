@@ -1,540 +1,532 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       categories: {
         Row: {
-          color: string
-          created_at: string
-          id: string
-          name: string
-          user_id: string
-        }
+          color: string;
+          created_at: string;
+          id: string;
+          name: string;
+          user_id: string;
+        };
         Insert: {
-          color?: string
-          created_at?: string
-          id: string
-          name: string
-          user_id: string
-        }
+          color?: string;
+          created_at?: string;
+          id: string;
+          name: string;
+          user_id: string;
+        };
         Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          color?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
-          created_at: string
-          id: string
-          is_read: boolean
-          message: string
-          task_id: string
-          title: string
-          type: string
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          is_read: boolean;
+          message: string;
+          task_id: string;
+          title: string;
+          type: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id: string
-          is_read?: boolean
-          message: string
-          task_id: string
-          title: string
-          type: string
-          user_id: string
-        }
+          created_at?: string;
+          id: string;
+          is_read?: boolean;
+          message: string;
+          task_id: string;
+          title: string;
+          type: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message?: string
-          task_id?: string
-          title?: string
-          type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          is_read?: boolean;
+          message?: string;
+          task_id?: string;
+          title?: string;
+          type?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
-          avatar: string | null
-          created_at: string
-          email: string
-          extension: string
-          id: string
-          name: string
-          phone: string
-          role: string
-          settings: Json
-          updated_at: string
-          user_code: string
-          username: string | null
-        }
+          avatar: string | null;
+          created_at: string;
+          email: string;
+          extension: string;
+          id: string;
+          name: string;
+          phone: string;
+          role: string;
+          settings: Json;
+          updated_at: string;
+          user_code: string;
+          username: string | null;
+        };
         Insert: {
-          avatar?: string | null
-          created_at?: string
-          email?: string
-          extension?: string
-          id: string
-          name?: string
-          phone?: string
-          role?: string
-          settings?: Json
-          updated_at?: string
-          user_code: string
-          username?: string | null
-        }
+          avatar?: string | null;
+          created_at?: string;
+          email?: string;
+          extension?: string;
+          id: string;
+          name?: string;
+          phone?: string;
+          role?: string;
+          settings?: Json;
+          updated_at?: string;
+          user_code: string;
+          username?: string | null;
+        };
         Update: {
-          avatar?: string | null
-          created_at?: string
-          email?: string
-          extension?: string
-          id?: string
-          name?: string
-          phone?: string
-          role?: string
-          settings?: Json
-          updated_at?: string
-          user_code?: string
-          username?: string | null
-        }
-        Relationships: []
-      }
+          avatar?: string | null;
+          created_at?: string;
+          email?: string;
+          extension?: string;
+          id?: string;
+          name?: string;
+          phone?: string;
+          role?: string;
+          settings?: Json;
+          updated_at?: string;
+          user_code?: string;
+          username?: string | null;
+        };
+        Relationships: [];
+      };
       project_members: {
         Row: {
-          access: string
-          created_at: string
-          id: string
-          member_user_id: string
-          owner_id: string
-          project_id: string
-          role: string
-          stage_ids: string[]
-          status: string
-          updated_at: string
-        }
+          access: string;
+          created_at: string;
+          id: string;
+          member_user_id: string;
+          owner_id: string;
+          project_id: string;
+          role: string;
+          stage_ids: string[];
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          access?: string
-          created_at?: string
-          id?: string
-          member_user_id: string
-          owner_id: string
-          project_id: string
-          role?: string
-          stage_ids?: string[]
-          status?: string
-          updated_at?: string
-        }
+          access?: string;
+          created_at?: string;
+          id?: string;
+          member_user_id: string;
+          owner_id: string;
+          project_id: string;
+          role?: string;
+          stage_ids?: string[];
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          access?: string
-          created_at?: string
-          id?: string
-          member_user_id?: string
-          owner_id?: string
-          project_id?: string
-          role?: string
-          stage_ids?: string[]
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          access?: string;
+          created_at?: string;
+          id?: string;
+          member_user_id?: string;
+          owner_id?: string;
+          project_id?: string;
+          role?: string;
+          stage_ids?: string[];
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       projects: {
         Row: {
-          category_id: string | null
-          completed_at: string | null
-          created_at: string
-          description: string
-          due_date: string | null
-          id: string
-          members: Json
-          priority: string
-          stages: Json
-          status: string
-          tag_ids: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
+          category_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          id: string;
+          members: Json;
+          priority: string;
+          stages: Json;
+          status: string;
+          tag_ids: string[];
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          category_id?: string | null
-          completed_at?: string | null
-          created_at?: string
-          description?: string
-          due_date?: string | null
-          id: string
-          members?: Json
-          priority?: string
-          stages?: Json
-          status?: string
-          tag_ids?: string[]
-          title: string
-          updated_at?: string
-          user_id: string
-        }
+          category_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          id: string;
+          members?: Json;
+          priority?: string;
+          stages?: Json;
+          status?: string;
+          tag_ids?: string[];
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          category_id?: string | null
-          completed_at?: string | null
-          created_at?: string
-          description?: string
-          due_date?: string | null
-          id?: string
-          members?: Json
-          priority?: string
-          stages?: Json
-          status?: string
-          tag_ids?: string[]
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          category_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          id?: string;
+          members?: Json;
+          priority?: string;
+          stages?: Json;
+          status?: string;
+          tag_ids?: string[];
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       push_subscriptions: {
         Row: {
-          auth: string
-          created_at: string
-          endpoint: string
-          id: string
-          last_sent_at: string | null
-          p256dh: string
-          user_id: string
-        }
+          auth: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          last_sent_at: string | null;
+          p256dh: string;
+          user_id: string;
+        };
         Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
-          id?: string
-          last_sent_at?: string | null
-          p256dh: string
-          user_id: string
-        }
+          auth: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          last_sent_at?: string | null;
+          p256dh: string;
+          user_id: string;
+        };
         Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
-          id?: string
-          last_sent_at?: string | null
-          p256dh?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          auth?: string;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          last_sent_at?: string | null;
+          p256dh?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       tags: {
         Row: {
-          created_at: string
-          id: string
-          name: string
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          name: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id: string
-          name: string
-          user_id: string
-        }
+          created_at?: string;
+          id: string;
+          name: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          name?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
-          category_id: string | null
-          completed_at: string | null
-          created_at: string
-          description: string
-          due_date: string | null
-          id: string
-          priority: string
-          status: string
-          tag_ids: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
+          category_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          id: string;
+          priority: string;
+          status: string;
+          tag_ids: string[];
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          category_id?: string | null
-          completed_at?: string | null
-          created_at?: string
-          description?: string
-          due_date?: string | null
-          id: string
-          priority?: string
-          status?: string
-          tag_ids?: string[]
-          title: string
-          updated_at?: string
-          user_id: string
-        }
+          category_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          id: string;
+          priority?: string;
+          status?: string;
+          tag_ids?: string[];
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          category_id?: string | null
-          completed_at?: string | null
-          created_at?: string
-          description?: string
-          due_date?: string | null
-          id?: string
-          priority?: string
-          status?: string
-          tag_ids?: string[]
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-    }
+          category_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          id?: string;
+          priority?: string;
+          status?: string;
+          tag_ids?: string[];
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
       delete_owned_project_atomic: {
-        Args: { _project_id: string }
-        Returns: boolean
-      }
-      delete_owned_task_atomic: { Args: { _task_id: string }; Returns: boolean }
-      email_for_username: { Args: { _username: string }; Returns: string }
-      gen_user_code: { Args: never; Returns: string }
+        Args: { _project_id: string };
+        Returns: boolean;
+      };
+      delete_owned_task_atomic: { Args: { _task_id: string }; Returns: boolean };
+      email_for_username: { Args: { _username: string }; Returns: string };
+      gen_user_code: { Args: never; Returns: string };
       is_project_member: {
-        Args: { _project_id: string; _user_id: string }
-        Returns: boolean
-      }
+        Args: { _project_id: string; _user_id: string };
+        Returns: boolean;
+      };
       save_owned_project_atomic: {
-        Args: { _patch: Json; _project_id: string }
+        Args: { _patch: Json; _project_id: string };
         Returns: {
-          category_id: string | null
-          completed_at: string | null
-          created_at: string
-          description: string
-          due_date: string | null
-          id: string
-          members: Json
-          priority: string
-          stages: Json
-          status: string
-          tag_ids: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
+          category_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          id: string;
+          members: Json;
+          priority: string;
+          stages: Json;
+          status: string;
+          tag_ids: string[];
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "projects"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "projects";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       save_owned_task_atomic: {
-        Args: { _patch: Json; _task_id: string }
+        Args: { _patch: Json; _task_id: string };
         Returns: {
-          category_id: string | null
-          completed_at: string | null
-          created_at: string
-          description: string
-          due_date: string | null
-          id: string
-          priority: string
-          status: string
-          tag_ids: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
+          category_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          id: string;
+          priority: string;
+          status: string;
+          tag_ids: string[];
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "tasks"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "tasks";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       search_app_users: {
-        Args: { _q: string }
+        Args: { _q: string };
         Returns: {
-          avatar: string
-          email: string
-          extension: string
-          id: string
-          name: string
-          phone: string
-          role: string
-          user_code: string
-          username: string
-        }[]
-      }
+          avatar: string;
+          email: string;
+          extension: string;
+          id: string;
+          name: string;
+          phone: string;
+          role: string;
+          user_code: string;
+          username: string;
+        }[];
+      };
       toggle_assigned_stage_atomic: {
-        Args: { _project_id: string; _stage_id: string }
+        Args: { _project_id: string; _stage_id: string };
         Returns: {
-          category_id: string | null
-          completed_at: string | null
-          created_at: string
-          description: string
-          due_date: string | null
-          id: string
-          members: Json
-          priority: string
-          stages: Json
-          status: string
-          tag_ids: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
+          category_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          id: string;
+          members: Json;
+          priority: string;
+          stages: Json;
+          status: string;
+          tag_ids: string[];
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "projects"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      username_available: { Args: { _username: string }; Returns: boolean }
-    }
+          from: "*";
+          to: "projects";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      username_available: { Args: { _username: string }; Returns: boolean };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const
+} as const;
