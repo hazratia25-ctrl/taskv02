@@ -39,7 +39,15 @@ import {
 } from "./collab.functions";
 
 import { pendingCount, flushQueue } from "./sync-queue";
-import { deriveProjectStatus, mergeOwnedProject, mergeSharedStages } from "./access";
+import { deriveProjectStatus } from "./access";
+import {
+  browserLifecycleEnv,
+  createPendingCounter,
+  createSingleFlight,
+  mergeCollabSnapshot,
+  startCollabRealtime,
+  type RealtimeClientLike,
+} from "./realtime-sync";
 
 import { toast } from "sonner";
 
@@ -460,13 +468,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (next: Project, previous: Project | null, isNew = false) => {
       if (!userId || next.readOnly) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
       // counted, so overlapping writes to one project keep it pending until the last one settles
-      const pend = pendingProjects.current;
-      pend.set(next.id, (pend.get(next.id) ?? 0) + 1);
-      const settle = () => {
-        const n = (pend.get(next.id) ?? 1) - 1;
-        if (n <= 0) pend.delete(next.id);
-        else pend.set(next.id, n);
-      };
+      const settle = pendingProjects.current.begin(next.id);
       const call = isNew
         ? createOwnedProject({ data: toWrite(next) })
         : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
@@ -478,19 +480,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         throw e;
       }
       settle();
-      collabSeq.current += 1; // any fetch started before the write is now stale
+      collabFlight.invalidate(); // any fetch started before the write is now stale
       await refreshCollab();
     },
-    [userId, toWrite, failed, refreshCollab],
+    [userId, toWrite, failed, refreshCollab, collabFlight],
   );
 
   const removeProject = useCallback(
     async (previous: Project) => {
       if (!userId || previous.readOnly) throw new Error("دسترسی حذف پروژه ندارید.");
       try {
-        collabSeq.current += 1; // drop snapshots that still contain the project
+        collabFlight.invalidate(); // drop snapshots that still contain the project
         await deleteOwnedProject({ data: { projectId: previous.id } });
-        collabSeq.current += 1;
+        collabFlight.invalidate();
       } catch (e) {
         setData((prev) =>
           prev.projects.some((p) => p.id === previous.id)
