@@ -503,7 +503,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         throw e;
       }
     },
-    [userId],
+    [userId, collabFlight],
   );
 
   const value = useMemo<StoreValue>(() => {
