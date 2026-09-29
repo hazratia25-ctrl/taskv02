@@ -318,6 +318,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      normalize_member_access: { Args: { _a: string }; Returns: string }
       save_owned_project_atomic: {
         Args: { _patch: Json; _project_id: string }
         Returns: {
@@ -379,6 +380,10 @@ export type Database = {
           user_code: string
           username: string
         }[]
+      }
+      set_member_access_atomic: {
+        Args: { _access: string; _member_user_id: string; _project_id: string }
+        Returns: string
       }
       toggle_assigned_stage_atomic: {
         Args: { _project_id: string; _stage_id: string }
