@@ -15,6 +15,13 @@
       "when": 1789478140869,
       "tag": "0001_harden_delete_project_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790679377048,
+      "tag": "0002_member_access_guard",
+      "breakpoints": true
     }
   ]
 }
