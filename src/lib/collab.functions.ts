@@ -198,11 +198,14 @@ export const searchAppUsers = createServerFn({ method: "POST" })
 /** Owner invites a real account to a project (pending until accepted). */
 export const inviteProjectMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { projectId: string; memberUserId: string; role: string }) => ({
-    projectId: String(data.projectId),
-    memberUserId: String(data.memberUserId),
-    role: String(data.role ?? "").slice(0, 80),
-  }))
+  .inputValidator(
+    (data: { projectId: string; memberUserId: string; role: string; access?: string }) => ({
+      projectId: String(data.projectId),
+      memberUserId: String(data.memberUserId),
+      role: String(data.role ?? "").slice(0, 80),
+      access: ["VIEW", "EDIT", "MANAGE"].includes(String(data.access)) ? String(data.access) : "VIEW",
+    }),
+  )
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context;
     if (data.memberUserId === userId) throw new Error("نمی‌توانید خودتان را دعوت کنید.");
@@ -213,19 +216,15 @@ export const inviteProjectMember = createServerFn({ method: "POST" })
       .eq("id", data.projectId)
       .maybeSingle();
     if (projectError) throw new Error(projectError.message);
-    if (!project || project.user_id !== userId) throw new Error("این پروژه از شما نیست.");
+    if (!project) throw new Error("پروژه یافت نشد.");
 
-    const { error } = await supabase.from("project_members").upsert(
-      {
-        project_id: data.projectId,
-        owner_id: userId,
-        member_user_id: data.memberUserId,
-        role: data.role,
-        access: "VIEW",
-        status: "PENDING",
-      },
-      { onConflict: "project_id,member_user_id" },
-    );
+    // owner or accepted MANAGE member only — enforced inside the RPC
+    const { error } = await supabase.rpc("invite_member_atomic", {
+      _project_id: data.projectId,
+      _member_user_id: data.memberUserId,
+      _role: data.role,
+      _access: data.access,
+    });
     if (error) throw new Error(error.message);
 
     const { data: me } = await supabase
@@ -369,14 +368,30 @@ export const removeProjectMember = createServerFn({ method: "POST" })
     memberUserId: String(data.memberUserId),
   }))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("project_members")
-      .delete()
-      .eq("project_id", data.projectId)
-      .eq("member_user_id", data.memberUserId)
-      .eq("owner_id", context.userId);
+    const { error } = await context.supabase.rpc("remove_member_atomic", {
+      _project_id: data.projectId,
+      _member_user_id: data.memberUserId,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Changes a member's access level; owner or MANAGE only, enforced in the RPC. */
+export const setMemberAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { projectId: string; memberUserId: string; access: string }) => ({
+    projectId: String(data.projectId),
+    memberUserId: String(data.memberUserId),
+    access: String(data.access),
+  }))
+  .handler(async ({ data, context }) => {
+    const { data: access, error } = await context.supabase.rpc("set_member_access_atomic", {
+      _project_id: data.projectId,
+      _member_user_id: data.memberUserId,
+      _access: data.access,
+    });
+    if (error) throw new Error(error.message);
+    return { access: access as string };
   });
 
 /** Member ticks only the stage assigned to them; everything else stays read-only. */
