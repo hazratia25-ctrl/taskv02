@@ -3,7 +3,16 @@ import { projectPermissions } from "../src/lib/access";
 import type { Project } from "../src/lib/types";
 
 const base = (over: Partial<Project>): Project =>
-  ({ id: "p", title: "t", members: [], stages: [{ id: "s1", assigneeId: "m1" }, { id: "s2", assigneeId: "m2" }], ...over }) as unknown as Project;
+  ({
+    id: "p",
+    title: "t",
+    members: [],
+    stages: [
+      { id: "s1", assigneeId: "m1" },
+      { id: "s2", assigneeId: "m2" },
+    ],
+    ...over,
+  }) as unknown as Project;
 const shared = (access: string) =>
   base({ readOnly: true, myMemberId: "m1", members: [{ id: "m1", access }] } as never);
 

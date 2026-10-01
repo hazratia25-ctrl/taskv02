@@ -203,7 +203,9 @@ export const inviteProjectMember = createServerFn({ method: "POST" })
       projectId: String(data.projectId),
       memberUserId: String(data.memberUserId),
       role: String(data.role ?? "").slice(0, 80),
-      access: ["VIEW", "EDIT", "MANAGE"].includes(String(data.access)) ? String(data.access) : "VIEW",
+      access: ["VIEW", "EDIT", "MANAGE"].includes(String(data.access))
+        ? String(data.access)
+        : "VIEW",
     }),
   )
   .handler(async ({ data, context }) => {
