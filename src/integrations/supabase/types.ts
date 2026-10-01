@@ -307,6 +307,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_project: { Args: { _project_id: string }; Returns: boolean }
       delete_owned_project_atomic: {
         Args: { _project_id: string }
         Returns: boolean
@@ -314,11 +315,24 @@ export type Database = {
       delete_owned_task_atomic: { Args: { _task_id: string }; Returns: boolean }
       email_for_username: { Args: { _username: string }; Returns: string }
       gen_user_code: { Args: never; Returns: string }
+      invite_member_atomic: {
+        Args: {
+          _access: string
+          _member_user_id: string
+          _project_id: string
+          _role: string
+        }
+        Returns: string
+      }
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       normalize_member_access: { Args: { _a: string }; Returns: string }
+      remove_member_atomic: {
+        Args: { _member_user_id: string; _project_id: string }
+        Returns: boolean
+      }
       save_owned_project_atomic: {
         Args: { _patch: Json; _project_id: string }
         Returns: {

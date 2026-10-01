@@ -28,7 +28,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowRight, Plus, Trash2, Users, Search, Pencil, Check, X } from "lucide-react";
-import { inviteProjectMember, removeProjectMember, type FoundUser } from "@/lib/collab.functions";
+import {
+  inviteProjectMember,
+  removeProjectMember,
+  setMemberAccess,
+  type FoundUser,
+} from "@/lib/collab.functions";
 import { MemberSearch } from "@/components/member-search";
 import { MemberAvatar } from "@/components/project-item";
 import { toast } from "sonner";
@@ -61,6 +66,7 @@ function InviteRealUser({
   setMembers: (next: ProjectMember[]) => void;
 }) {
   const [role, setRole] = useState("");
+  const [inviteAccess, setInviteAccess] = useState<MemberAccess>("VIEW");
   const [busy, setBusy] = useState(false);
 
   const invite = async (u: FoundUser) => {
@@ -71,7 +77,12 @@ function InviteRealUser({
     setBusy(true);
     try {
       await inviteProjectMember({
-        data: { projectId: project.id, memberUserId: u.id, role: role.trim() || u.role },
+        data: {
+          projectId: project.id,
+          memberUserId: u.id,
+          role: role.trim() || u.role,
+          access: inviteAccess,
+        },
       });
       setMembers([
         ...members,
@@ -79,7 +90,7 @@ function InviteRealUser({
           id: uid(),
           name: u.name || u.userCode,
           role: role.trim() || u.role || "عضو تیم",
-          access: "VIEW",
+          access: inviteAccess,
           phone: u.phone,
           extension: u.extension,
           email: u.email,
@@ -108,6 +119,18 @@ function InviteRealUser({
         شناسه کاربری (مثل TM-4F9K2)، نام کاربری یا ایمیل عضو را وارد کنید.
       </p>
       <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="نقش در پروژه" />
+      <Select value={inviteAccess} onValueChange={(v) => setInviteAccess(v as MemberAccess)}>
+        <SelectTrigger aria-label="سطح دسترسی دعوت">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ACCESS_VALUES.map((a) => (
+            <SelectItem key={a} value={a}>
+              {ACCESS_LABELS[a]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <MemberSearch onPick={invite} addLabel="دعوت و افزودن" busy={busy} />
     </div>
   );
@@ -120,7 +143,7 @@ function MemberRow({
   onRemove,
 }: {
   member: ProjectMember;
-  onSave: (patch: Partial<ProjectMember>) => void;
+  onSave: (patch: Partial<ProjectMember>) => Promise<void>;
   onRemove: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -208,15 +231,19 @@ function MemberRow({
           <div className="flex gap-2">
             <Button
               size="sm"
-              onClick={() => {
-                onSave({
-                  name: draft.name,
-                  role: draft.role,
-                  phone: draft.phone,
-                  access: draft.access,
-                });
-                setEditing(false);
-                toast.success("تغییرات عضو ذخیره شد");
+              onClick={async () => {
+                try {
+                  await onSave({
+                    name: draft.name,
+                    role: draft.role,
+                    phone: draft.phone,
+                    access: draft.access,
+                  });
+                  setEditing(false);
+                  toast.success("تغییرات عضو ذخیره شد");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "ذخیرهٔ تغییرات ناموفق بود");
+                }
               }}
             >
               <Check className="size-4" /> تایید تغییرات
@@ -316,8 +343,16 @@ function MembersPage() {
     toast.success("عضو جدید اضافه شد");
   };
 
-  const patchMember = (id: string, patch: Partial<ProjectMember>) =>
+  /** Access changes for real accounts go through the atomic RPC first; UI updates only after success. */
+  const patchMember = async (id: string, patch: Partial<ProjectMember>) => {
+    const current = members.find((m) => m.id === id);
+    if (current?.userId && patch.access && patch.access !== current.access) {
+      await setMemberAccess({
+        data: { projectId: project.id, memberUserId: current.userId, access: patch.access },
+      });
+    }
     setMembers(members.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  };
 
   return (
     <div className="space-y-5">
@@ -404,20 +439,23 @@ function MembersPage() {
                 key={m.id}
                 member={m}
                 onSave={(patch) => patchMember(m.id, patch)}
-                onRemove={() => {
+                onRemove={async () => {
+                  if (m.userId) {
+                    try {
+                      await removeProjectMember({
+                        data: { projectId: project.id, memberUserId: m.userId },
+                      });
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "حذف عضو ناموفق بود");
+                      return;
+                    }
+                  }
                   updateProject(project.id, {
                     members: members.filter((x) => x.id !== m.id),
                     stages: (project.stages ?? []).map((st) =>
                       st.assigneeId === m.id ? { ...st, assigneeId: null } : st,
                     ),
                   });
-                  if (m.userId) {
-                    void removeProjectMember({
-                      data: { projectId: project.id, memberUserId: m.userId },
-                    }).catch(() => {
-                      /* membership row cleanup is best-effort */
-                    });
-                  }
                   toast.success("عضو حذف شد");
                 }}
               />
