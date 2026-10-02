@@ -616,7 +616,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateProject: async (id, input) => {
         const before = data.projects.find((pr) => pr.id === id);
         // shared projects: only content fields may change; the server re-checks EDIT/MANAGE
-        const p2 = before?.readOnly ? sharedContentPatch(input) : input;
+        const p2: Partial<ProjectInput> = before?.readOnly ? sharedContentPatch(input) : input;
         if (before && !before.readOnly && p2.stages) {
           sendNotices(
             id,
