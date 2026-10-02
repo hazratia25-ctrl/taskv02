@@ -32,6 +32,7 @@ import {
   inviteProjectMember,
   removeProjectMember,
   setMemberAccess,
+  setMemberDetails,
   type FoundUser,
 } from "@/lib/collab.functions";
 import { MemberSearch } from "@/components/member-search";
@@ -349,6 +350,11 @@ function MembersPage() {
     if (current?.userId && patch.access && patch.access !== current.access) {
       await setMemberAccess({
         data: { projectId: project.id, memberUserId: current.userId, access: patch.access },
+      });
+    }
+    if (current?.userId && patch.role !== undefined && patch.role !== current.role) {
+      await setMemberDetails({
+        data: { projectId: project.id, memberUserId: current.userId, role: patch.role },
       });
     }
     setMembers(members.map((m) => (m.id === id ? { ...m, ...patch } : m)));

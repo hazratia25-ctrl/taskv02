@@ -40,7 +40,7 @@ import {
 } from "./collab.functions";
 
 import { pendingCount, flushQueue } from "./sync-queue";
-import { deriveProjectStatus } from "./access";
+import { deriveProjectStatus, sharedContentPatch } from "./access";
 import {
   browserLifecycleEnv,
   createPendingCounter,

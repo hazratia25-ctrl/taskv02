@@ -41,3 +41,29 @@ describe("access matrix (client)", () => {
     expect(p.canManageMembers).toBe(false);
   });
 });
+
+import { sharedContentPatch } from "../src/lib/access";
+
+describe("shared edit rights", () => {
+  test("EDIT and MANAGE may edit content, VIEW may not", () => {
+    expect(projectPermissions(shared("EDIT")).canEditProject).toBe(true);
+    expect(projectPermissions(shared("MANAGE")).canEditProject).toBe(true);
+    expect(projectPermissions(shared("VIEW")).canEditProject).toBe(false);
+  });
+  test("pending/rejected/non-member (no membership row) get VIEW only", () => {
+    const p = projectPermissions(base({ readOnly: true, myMemberId: undefined } as never));
+    expect(p.canEditProject || p.canManageMembers || p.canDeleteProject).toBe(false);
+    expect(p.canToggleStage({ id: "s1", assigneeId: "m1" } as never)).toBe(false);
+  });
+  test("shared patch drops owner, members, stages and status (spoof attempt)", () => {
+    const out = sharedContentPatch({
+      title: "x",
+      user_id: "attacker",
+      members: [{ id: "m1", access: "MANAGE" }],
+      stages: [],
+      status: "COMPLETED",
+      dueDate: null,
+    });
+    expect(Object.keys(out).sort()).toEqual(["dueDate", "title"]);
+  });
+});
