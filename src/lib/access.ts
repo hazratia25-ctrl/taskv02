@@ -109,3 +109,17 @@ export function sharedContentPatch<T extends Record<string, unknown>>(patch: T) 
   for (const k of SHARED_CONTENT_FIELDS) if (k in patch) out[k] = patch[k];
   return out as Partial<Pick<Project, (typeof SHARED_CONTENT_FIELDS)[number]>>;
 }
+
+/** Server-first member change: returns the next list only after `send` succeeds, else the untouched previous list. */
+export async function commitMemberChange<T>(
+  previous: T,
+  next: T,
+  send: () => Promise<unknown>,
+): Promise<{ value: T; error: Error | null }> {
+  try {
+    await send();
+    return { value: next, error: null };
+  } catch (e) {
+    return { value: previous, error: e instanceof Error ? e : new Error(String(e)) };
+  }
+}

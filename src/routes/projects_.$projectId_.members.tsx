@@ -15,7 +15,7 @@ import {
 import { useStore, uid } from "@/lib/store";
 import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
-import { projectPermissions } from "@/lib/access";
+import { commitMemberChange, projectPermissions } from "@/lib/access";
 
 import {
   AlertDialog,
@@ -140,16 +140,19 @@ function InviteRealUser({
 /** One member row: read-only until «ویرایش», then confirm or cancel the change. */
 function MemberRow({
   member,
+  stages,
   onSave,
   onRemove,
 }: {
   member: ProjectMember;
+  stages: { id: string; title: string }[];
   onSave: (patch: Partial<ProjectMember>) => Promise<void>;
   onRemove: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ProjectMember>(member);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [stageIds, setStageIds] = useState<string[] | null>(null);
 
   const start = () => {
     setDraft(member);
@@ -229,12 +232,33 @@ function MemberRow({
               </SelectContent>
             </Select>
           </div>
+          {member.userId && stages.length > 0 && (
+            <div className="flex flex-wrap gap-3 text-sm" aria-label="مراحل اختصاص‌یافته">
+              {stages.map((st) => (
+                <label key={st.id} className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={(stageIds ?? []).includes(st.id)}
+                    onChange={(e) =>
+                      setStageIds((cur) =>
+                        e.target.checked
+                          ? [...(cur ?? []), st.id]
+                          : (cur ?? []).filter((x) => x !== st.id),
+                      )
+                    }
+                  />
+                  {st.title}
+                </label>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2">
             <Button
               size="sm"
               onClick={async () => {
                 try {
                   await onSave({
+                    ...(stageIds ? ({ stageIds } as Partial<ProjectMember>) : {}),
                     name: draft.name,
                     role: draft.role,
                     phone: draft.phone,
@@ -344,6 +368,25 @@ function MembersPage() {
     toast.success("عضو جدید اضافه شد");
   };
 
+  /** Role/stage changes go only through set_member_details_atomic; list updates after server success. */
+  const patchMemberDetails = async (id: string, patch: Partial<ProjectMember>) => {
+    const current = members.find((m) => m.id === id);
+    const stageIds = (patch as { stageIds?: string[] }).stageIds;
+    const roleChanged = patch.role !== undefined && patch.role !== current?.role;
+    if (!current?.userId || (!roleChanged && !stageIds)) return;
+    const res = await commitMemberChange(members, members, () =>
+      setMemberDetails({
+        data: {
+          projectId: project.id,
+          memberUserId: current.userId!,
+          role: roleChanged ? patch.role : undefined,
+          stageIds,
+        },
+      }),
+    );
+    if (res.error) throw res.error;
+  };
+
   /** Access changes for real accounts go through the atomic RPC first; UI updates only after success. */
   const patchMember = async (id: string, patch: Partial<ProjectMember>) => {
     const current = members.find((m) => m.id === id);
@@ -352,11 +395,8 @@ function MembersPage() {
         data: { projectId: project.id, memberUserId: current.userId, access: patch.access },
       });
     }
-    if (current?.userId && patch.role !== undefined && patch.role !== current.role) {
-      await setMemberDetails({
-        data: { projectId: project.id, memberUserId: current.userId, role: patch.role },
-      });
-    }
+    await patchMemberDetails(id, patch);
+    delete (patch as { stageIds?: string[] }).stageIds;
     setMembers(members.map((m) => (m.id === id ? { ...m, ...patch } : m)));
   };
 
@@ -444,6 +484,7 @@ function MembersPage() {
               <MemberRow
                 key={m.id}
                 member={m}
+                stages={(project.stages ?? []).map((st) => ({ id: st.id, title: st.title }))}
                 onSave={(patch) => patchMember(m.id, patch)}
                 onRemove={async () => {
                   if (m.userId) {
