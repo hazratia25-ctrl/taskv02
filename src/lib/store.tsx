@@ -30,6 +30,7 @@ import {
   notifyStageChanges,
   createOwnedProject,
   saveOwnedProject,
+  saveSharedProjectContent,
   deleteOwnedProject,
   createOwnedTask,
   saveOwnedTask,
@@ -466,12 +467,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   /** Persists an owned project to the cloud; rolls the local state back on failure. */
   const persistProject = useCallback(
     async (next: Project, previous: Project | null, isNew = false) => {
-      if (!userId || next.readOnly) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
+      if (!userId) throw new Error("برای ذخیره پروژه باید وارد حساب شوید.");
+      if (next.readOnly && isNew) throw new Error("دسترسی ساخت این پروژه را ندارید.");
       // counted, so overlapping writes to one project keep it pending until the last one settles
       const settle = pendingProjects.current.begin(next.id);
       const call = isNew
         ? createOwnedProject({ data: toWrite(next) })
-        : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
+        : next.readOnly
+          ? saveSharedProjectContent({
+              data: {
+                projectId: next.id,
+                patch: {
+                  title: next.title,
+                  description: next.description,
+                  priority: next.priority,
+                  dueDate: next.dueDate ?? null,
+                },
+              },
+            })
+          : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
       try {
         await call;
       } catch (e) {
@@ -599,8 +613,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await persistProject(project, null, true);
         return project;
       },
-      updateProject: async (id, p2) => {
+      updateProject: async (id, input) => {
         const before = data.projects.find((pr) => pr.id === id);
+        // shared projects: only content fields may change; the server re-checks EDIT/MANAGE
+        const p2 = before?.readOnly ? sharedContentPatch(input) : input;
         if (before && !before.readOnly && p2.stages) {
           sendNotices(
             id,

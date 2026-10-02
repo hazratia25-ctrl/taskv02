@@ -30,7 +30,7 @@ export function projectPermissions(project: Project): ProjectPermissions {
   return {
     isOwner: false,
     access,
-    canEditProject: false,
+    canEditProject: access === "EDIT" || access === "MANAGE",
     canDeleteProject: false,
     canManageMembers: access === "MANAGE",
     canEditStages: false,
@@ -99,4 +99,13 @@ export function mergeSharedStages(local: ProjectStage[], remote: ProjectStage[])
     if (ls && ls.done !== rs.done && stageTime(ls) > stageTime(rs)) return { ...rs, ...ls };
     return rs;
   });
+}
+
+/** Fields a non-owner EDIT/MANAGE member may change; everything else is dropped before sending. */
+export const SHARED_CONTENT_FIELDS = ["title", "description", "priority", "dueDate"] as const;
+
+export function sharedContentPatch<T extends Record<string, unknown>>(patch: T) {
+  const out: Record<string, unknown> = {};
+  for (const k of SHARED_CONTENT_FIELDS) if (k in patch) out[k] = patch[k];
+  return out as Partial<Pick<Project, (typeof SHARED_CONTENT_FIELDS)[number]>>;
 }

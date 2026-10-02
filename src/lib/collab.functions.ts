@@ -494,3 +494,43 @@ export const notifyStageChanges = createServerFn({ method: "POST" })
     }
     return { ok: true, sent };
   });
+
+/** Content-only edit of a shared project (owner or accepted EDIT/MANAGE), enforced in the RPC. */
+export const saveSharedProjectContent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      projectId: string;
+      patch: { title?: string; description?: string; priority?: string; dueDate?: string | null };
+    }) => ({ projectId: String(data.projectId), patch: data.patch ?? {} }),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.rpc("save_shared_project_content", {
+      _project_id: data.projectId,
+      _patch: data.patch as never,
+    });
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/** Changes a member's role/assigned stages; owner or accepted MANAGE only. */
+export const setMemberDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { projectId: string; memberUserId: string; role?: string; stageIds?: string[] }) => ({
+      projectId: String(data.projectId),
+      memberUserId: String(data.memberUserId),
+      role: data.role === undefined ? null : String(data.role).slice(0, 80),
+      stageIds: Array.isArray(data.stageIds) ? data.stageIds.map(String) : null,
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("set_member_details_atomic", {
+      _project_id: data.projectId,
+      _member_user_id: data.memberUserId,
+      _role: data.role as never,
+      _stage_ids: data.stageIds as never,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
