@@ -29,6 +29,13 @@
       "when": 1790843705589,
       "tag": "0003_member_rpc_guard_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790899587145,
+      "tag": "0004_shared_project_edit_rpcs",
+      "breakpoints": true
     }
   ]
 }

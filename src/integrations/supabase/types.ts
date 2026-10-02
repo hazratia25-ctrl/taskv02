@@ -381,6 +381,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      save_shared_project_content: {
+        Args: { _patch: Json; _project_id: string }
+        Returns: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          members: Json
+          priority: string
+          stages: Json
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       search_app_users: {
         Args: { _q: string }
         Returns: {
@@ -398,6 +423,15 @@ export type Database = {
       set_member_access_atomic: {
         Args: { _access: string; _member_user_id: string; _project_id: string }
         Returns: string
+      }
+      set_member_details_atomic: {
+        Args: {
+          _member_user_id: string
+          _project_id: string
+          _role: string
+          _stage_ids: string[]
+        }
+        Returns: boolean
       }
       toggle_assigned_stage_atomic: {
         Args: { _project_id: string; _stage_id: string }
