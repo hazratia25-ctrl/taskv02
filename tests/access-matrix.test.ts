@@ -67,3 +67,24 @@ describe("shared edit rights", () => {
     expect(Object.keys(out).sort()).toEqual(["dueDate", "title"]);
   });
 });
+
+import { commitMemberChange } from "../src/lib/access";
+
+describe("server-first member change", () => {
+  test("success returns next and sends role+stage_ids", async () => {
+    const sent: unknown[] = [];
+    const r = await commitMemberChange([1], [2], async () => {
+      sent.push({ role: "r", stageIds: ["s1"] });
+    });
+    expect(r.value).toEqual([2]);
+    expect(r.error).toBeNull();
+    expect(sent).toEqual([{ role: "r", stageIds: ["s1"] }]);
+  });
+  test("server error rolls back to previous", async () => {
+    const r = await commitMemberChange([1], [2], async () => {
+      throw new Error("Manage access required");
+    });
+    expect(r.value).toEqual([1]);
+    expect(r.error?.message).toBe("Manage access required");
+  });
+});
