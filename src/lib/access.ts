@@ -136,14 +136,15 @@ export function memberEditState(
 ): { allowed: boolean; reason: string | null } {
   const perms = projectPermissions(project);
   if (!perms.canManageMembers)
-    return { allowed: false, reason: "فقط مالک یا عضو با دسترسی مدیریت می‌تواند اعضا را ویرایش کند." };
+    return {
+      allowed: false,
+      reason: "فقط مالک یا عضو با دسترسی مدیریت می‌تواند اعضا را ویرایش کند.",
+    };
   if (project.myMemberId && member.id === project.myMemberId)
     return { allowed: false, reason: "ویرایش ردیف خودتان مجاز نیست." };
   if (!member.userId) return { allowed: false, reason: "این عضو حساب کاربری ندارد." };
-  if (member.status === "PENDING")
-    return { allowed: false, reason: "دعوت هنوز پذیرفته نشده است." };
-  if (member.status === "REJECTED")
-    return { allowed: false, reason: "دعوت رد شده است." };
+  if (member.status === "PENDING") return { allowed: false, reason: "دعوت هنوز پذیرفته نشده است." };
+  if (member.status === "REJECTED") return { allowed: false, reason: "دعوت رد شده است." };
   return { allowed: true, reason: null };
 }
 
