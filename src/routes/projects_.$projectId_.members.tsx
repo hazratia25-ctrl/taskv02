@@ -15,7 +15,13 @@ import {
 import { useStore, uid } from "@/lib/store";
 import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
-import { commitMemberChange, projectPermissions } from "@/lib/access";
+import {
+  applyStageAssignment,
+  commitMemberChange,
+  currentStageIds,
+  memberEditState,
+  projectPermissions,
+} from "@/lib/access";
 
 import {
   AlertDialog,
@@ -138,13 +144,20 @@ function InviteRealUser({
 }
 
 /** One member row: read-only until «ویرایش», then confirm or cancel the change. */
+const sameSet = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((x) => b.includes(x));
+
 function MemberRow({
   member,
   stages,
+  initialStageIds,
+  editState,
   onSave,
   onRemove,
 }: {
   member: ProjectMember;
+  initialStageIds: string[];
+  editState: { allowed: boolean; reason: string | null };
   stages: { id: string; title: string }[];
   onSave: (patch: Partial<ProjectMember>) => Promise<void>;
   onRemove: () => void;
@@ -155,7 +168,12 @@ function MemberRow({
   const [stageIds, setStageIds] = useState<string[] | null>(null);
 
   const start = () => {
+    if (!editState.allowed) {
+      toast.error(editState.reason ?? "ویرایش مجاز نیست.");
+      return;
+    }
     setDraft(member);
+    setStageIds([...initialStageIds]);
     setEditing(true);
   };
 
@@ -178,7 +196,14 @@ function MemberRow({
           <Badge variant="outline">{ACCESS_LABELS[member.access ?? "VIEW"]}</Badge>
           {member.status === "PENDING" && <Badge variant="outline">در انتظار پذیرش</Badge>}
           {!editing && (
-            <Button size="icon" variant="ghost" aria-label="ویرایش عضو" onClick={start}>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="ویرایش عضو"
+              disabled={!editState.allowed}
+              title={editState.reason ?? undefined}
+              onClick={start}
+            >
               <Pencil className="size-4" />
             </Button>
           )}
@@ -258,7 +283,9 @@ function MemberRow({
               onClick={async () => {
                 try {
                   await onSave({
-                    ...(stageIds ? ({ stageIds } as Partial<ProjectMember>) : {}),
+                    ...(stageIds && !sameSet(stageIds, initialStageIds)
+                      ? ({ stageIds } as Partial<ProjectMember>)
+                      : {}),
                     name: draft.name,
                     role: draft.role,
                     phone: draft.phone,
@@ -396,8 +423,14 @@ function MembersPage() {
       });
     }
     await patchMemberDetails(id, patch);
+    const confirmedStageIds = (patch as { stageIds?: string[] }).stageIds;
     delete (patch as { stageIds?: string[] }).stageIds;
-    setMembers(members.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+    updateProject(project.id, {
+      members: members.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+      ...(confirmedStageIds
+        ? { stages: applyStageAssignment(project.stages ?? [], id, confirmedStageIds) }
+        : {}),
+    });
   };
 
   return (
@@ -484,6 +517,8 @@ function MembersPage() {
               <MemberRow
                 key={m.id}
                 member={m}
+                initialStageIds={currentStageIds(project.stages ?? [], m.id)}
+                editState={memberEditState(project, m)}
                 stages={(project.stages ?? []).map((st) => ({ id: st.id, title: st.title }))}
                 onSave={(patch) => patchMember(m.id, patch)}
                 onRemove={async () => {

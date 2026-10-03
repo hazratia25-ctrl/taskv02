@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { projectPermissions } from "../src/lib/access";
+import {
+  applyStageAssignment,
+  commitMemberChange,
+  currentStageIds,
+  memberEditState,
+  projectPermissions,
+} from "../src/lib/access";
 import type { Project } from "../src/lib/types";
 
 const base = (over: Partial<Project>): Project =>
@@ -86,5 +92,78 @@ describe("server-first member change", () => {
     });
     expect(r.value).toEqual([1]);
     expect(r.error?.message).toBe("Manage access required");
+  });
+});
+
+describe("member editing UI guard, prefill and rollback", () => {
+  const stages = [
+    { id: "s1", assigneeId: "m2" },
+    { id: "s2", assigneeId: null },
+    { id: "s3", assigneeId: "m2" },
+  ] as never;
+  const m = (over = {}) => ({ id: "m2", userId: "u2", status: "ACCEPTED", ...over });
+  const ownerView = base({ members: [m()] as never });
+
+  test("prefill equals current assignments exactly", () => {
+    expect(currentStageIds(stages, "m2")).toEqual(["s1", "s3"]);
+    expect(currentStageIds(stages, "nobody")).toEqual([]);
+  });
+  test("re-applying prefilled ids changes nothing (no accidental clearing)", () => {
+    const ids = currentStageIds(stages, "m2");
+    expect(applyStageAssignment(stages, "m2", ids)).toEqual(stages);
+  });
+  test("apply adds and removes only this member's stages", () => {
+    const out = applyStageAssignment(stages, "m2", ["s2"]);
+    expect(out.map((s: { assigneeId: string | null }) => s.assigneeId)).toEqual([null, "m2", null]);
+  });
+  test("owner may edit accepted real member", () => {
+    expect(memberEditState(ownerView, m()).allowed).toBe(true);
+  });
+  test("accepted MANAGE may edit others but not self", () => {
+    const p = base({
+      readOnly: true,
+      myMemberId: "m1",
+      members: [{ id: "m1", access: "MANAGE" }, m()],
+    } as never);
+    expect(memberEditState(p, m()).allowed).toBe(true);
+    const self = memberEditState(p, { id: "m1", userId: "u1", status: "ACCEPTED" });
+    expect(self.allowed).toBe(false);
+    expect(self.reason).toBeTruthy();
+  });
+  for (const a of ["VIEW", "EDIT"]) {
+    test(`${a} viewer can never edit members`, () => {
+      const r = memberEditState(shared(a), m());
+      expect(r.allowed).toBe(false);
+      expect(r.reason).toBeTruthy();
+    });
+  }
+  for (const st of ["PENDING", "REJECTED"]) {
+    test(`${st} member not editable`, () => {
+      const r = memberEditState(ownerView, m({ status: st }));
+      expect(r.allowed).toBe(false);
+      expect(r.reason).toBeTruthy();
+    });
+  }
+  test("member without account not editable", () => {
+    expect(memberEditState(ownerView, m({ userId: null })).allowed).toBe(false);
+  });
+  test("server failure returns untouched list (rollback)", async () => {
+    const prev = [{ id: "a" }];
+    const r = await commitMemberChange(prev, [{ id: "b" }], async () => {
+      throw new Error("denied");
+    });
+    expect(r.value).toBe(prev);
+    expect(r.error?.message).toBe("denied");
+  });
+  test("role+stage_ids reach the server call and success returns next", async () => {
+    const sent: unknown[] = [];
+    const prev = [{ id: "a" }];
+    const next = [{ id: "b" }];
+    const r = await commitMemberChange(prev, next, async () => {
+      sent.push({ role: "dev", stageIds: ["s1"] });
+    });
+    expect(sent).toEqual([{ role: "dev", stageIds: ["s1"] }]);
+    expect(r.value).toBe(next);
+    expect(r.error).toBeNull();
   });
 });
