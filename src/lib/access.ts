@@ -123,3 +123,42 @@ export async function commitMemberChange<T>(
     return { value: previous, error: e instanceof Error ? e : new Error(String(e)) };
   }
 }
+
+/** Stage ids currently assigned to a member (prefill source; unchanged save must never clear them). */
+export function currentStageIds(stages: ProjectStage[], memberId: string): string[] {
+  return stages.filter((s) => s.assigneeId === memberId).map((s) => s.id);
+}
+
+/** Whether the UI may enable member editing at all; server rules stay authoritative. */
+export function memberEditState(
+  project: Project,
+  member: { id: string; userId?: string | null; status?: string; access?: MemberAccess },
+): { allowed: boolean; reason: string | null } {
+  const perms = projectPermissions(project);
+  if (!perms.canManageMembers)
+    return { allowed: false, reason: "فقط مالک یا عضو با دسترسی مدیریت می‌تواند اعضا را ویرایش کند." };
+  if (project.myMemberId && member.id === project.myMemberId)
+    return { allowed: false, reason: "ویرایش ردیف خودتان مجاز نیست." };
+  if (!member.userId) return { allowed: false, reason: "این عضو حساب کاربری ندارد." };
+  if (member.status === "PENDING")
+    return { allowed: false, reason: "دعوت هنوز پذیرفته نشده است." };
+  if (member.status === "REJECTED")
+    return { allowed: false, reason: "دعوت رد شده است." };
+  return { allowed: true, reason: null };
+}
+
+/** Local stage assignment after the server confirmed it. */
+export function applyStageAssignment(
+  stages: ProjectStage[],
+  memberId: string,
+  stageIds: string[],
+): ProjectStage[] {
+  const set = new Set(stageIds);
+  return stages.map((s) =>
+    set.has(s.id)
+      ? { ...s, assigneeId: memberId }
+      : s.assigneeId === memberId
+        ? { ...s, assigneeId: null }
+        : s,
+  );
+}
