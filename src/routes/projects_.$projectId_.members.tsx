@@ -1,4 +1,3 @@
-import { applyStageAssignment, currentStageIds, memberEditState } from "@/lib/access";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader, EmptyState } from "@/components/app-shell";
@@ -16,7 +15,13 @@ import {
 import { useStore, uid } from "@/lib/store";
 import { fa } from "@/lib/jalali";
 import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/types";
-import { commitMemberChange, projectPermissions } from "@/lib/access";
+import {
+  applyStageAssignment,
+  commitMemberChange,
+  currentStageIds,
+  memberEditState,
+  projectPermissions,
+} from "@/lib/access";
 
 import {
   AlertDialog,
