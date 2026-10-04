@@ -167,3 +167,40 @@ describe("member editing UI guard, prefill and rollback", () => {
     expect(r.error).toBeNull();
   });
 });
+
+import { prefillStageIds } from "../src/lib/access";
+
+describe("owner row block and real stage_ids prefill", () => {
+  const mm = (over = {}) => ({ id: "m2", userId: "u2", status: "ACCEPTED", ...over });
+  test("owned project: row of projects.user_id is blocked", () => {
+    const p = base({ ownerUserId: "owner1", members: [] } as never);
+    const r = memberEditState(p, mm({ userId: "owner1" }), { currentUserId: "owner1" });
+    expect(r.allowed).toBe(false);
+    expect(r.reason).toBeTruthy();
+  });
+  test("shared project: MANAGE cannot edit owner row (by projects.user_id)", () => {
+    const p = base({
+      readOnly: true,
+      myMemberId: "m1",
+      ownerUserId: "owner1",
+      members: [{ id: "m1", access: "MANAGE" }],
+    } as never);
+    expect(
+      memberEditState(p, mm({ id: "mo", userId: "owner1" }), { currentUserId: "u1" }).allowed,
+    ).toBe(false);
+    expect(memberEditState(p, mm(), { currentUserId: "u1" }).allowed).toBe(true);
+  });
+  test("self blocked by real user id even without myMemberId", () => {
+    const p = base({ ownerUserId: "o" } as never);
+    expect(memberEditState(p, mm({ userId: "me" }), { currentUserId: "me" }).allowed).toBe(false);
+  });
+  test("prefill uses project_members.stage_ids exactly (drops unknown ids)", () => {
+    const st = [
+      { id: "s1", assigneeId: null },
+      { id: "s2", assigneeId: "m2" },
+    ] as never;
+    expect(prefillStageIds(["s1", "ghost"], st, "m2")).toEqual(["s1"]);
+    expect(prefillStageIds([], st, "m2")).toEqual([]);
+    expect(prefillStageIds(undefined, st, "m2")).toEqual(["s2"]);
+  });
+});

@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +20,7 @@ import { ACCESS_LABELS, type MemberAccess, type ProjectMember } from "@/lib/type
 import {
   applyStageAssignment,
   commitMemberChange,
-  currentStageIds,
+  prefillStageIds,
   memberEditState,
   projectPermissions,
 } from "@/lib/access";
@@ -345,6 +347,30 @@ function MembersPage() {
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
   const [access, setAccess] = useState<MemberAccess>("VIEW");
+  const { user } = useAuth();
+  /** member_user_id -> project_members.stage_ids (rows readable under RLS) */
+  const [serverStages, setServerStages] = useState<Record<string, string[]>>({});
+  const membersKey = JSON.stringify(
+    (project?.members ?? []).map((m) => m.userId ?? "").concat(project?.updatedAt ?? ""),
+  );
+  useEffect(() => {
+    if (!project) return;
+    let alive = true;
+    supabase
+      .from("project_members")
+      .select("member_user_id, stage_ids")
+      .eq("project_id", project.id)
+      .then(({ data, error }) => {
+        if (!alive || error) return;
+        const map: Record<string, string[]> = {};
+        for (const r of data ?? []) map[r.member_user_id] = r.stage_ids ?? [];
+        setServerStages(map);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.id, membersKey]);
 
   if (!project) {
     return (
@@ -423,6 +449,9 @@ function MembersPage() {
       });
     }
     await patchMemberDetails(id, patch);
+    const confirmed = (patch as { stageIds?: string[] }).stageIds;
+    if (confirmed && current?.userId)
+      setServerStages((prev) => ({ ...prev, [current.userId!]: confirmed }));
     const confirmedStageIds = (patch as { stageIds?: string[] }).stageIds;
     delete (patch as { stageIds?: string[] }).stageIds;
     updateProject(project.id, {
@@ -517,8 +546,12 @@ function MembersPage() {
               <MemberRow
                 key={m.id}
                 member={m}
-                initialStageIds={currentStageIds(project.stages ?? [], m.id)}
-                editState={memberEditState(project, m)}
+                initialStageIds={prefillStageIds(
+                  m.userId ? serverStages[m.userId] : undefined,
+                  project.stages ?? [],
+                  m.id,
+                )}
+                editState={memberEditState(project, m, { currentUserId: user?.id ?? null })}
                 stages={(project.stages ?? []).map((st) => ({ id: st.id, title: st.title }))}
                 onSave={(patch) => patchMember(m.id, patch)}
                 onRemove={async () => {

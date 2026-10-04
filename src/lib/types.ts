@@ -105,6 +105,8 @@ export interface Project {
   /** current user's ProjectMember.id inside a shared project */
   myMemberId?: string | null;
   sharedByName?: string | null;
+  /** projects.user_id of the real owner (read-only, never sent back) */
+  ownerUserId?: string | null;
 }
 
 export interface UserProfile {
