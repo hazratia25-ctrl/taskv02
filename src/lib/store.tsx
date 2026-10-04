@@ -136,7 +136,12 @@ interface StoreValue extends AppData {
   resetAll: () => void;
 }
 
-const StoreContext = createContext<StoreValue | null>(null);
+// Kept on globalThis so a hot reload of this module reuses the same context
+// (otherwise the mounted provider and re-evaluated consumers disagree → blank screen).
+const STORE_CTX_KEY = "__taskStoreContext__";
+const StoreContext: React.Context<StoreValue | null> =
+  ((globalThis as Record<string, unknown>)[STORE_CTX_KEY] as React.Context<StoreValue | null>) ??
+  ((globalThis as Record<string, unknown>)[STORE_CTX_KEY] = createContext<StoreValue | null>(null));
 
 function statusFromCompletion(status: TaskStatus, completed: boolean): TaskStatus {
   if (completed) return "COMPLETED";
