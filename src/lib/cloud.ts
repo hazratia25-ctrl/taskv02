@@ -63,6 +63,7 @@ export function mapProjectRow(row: ProjectRow, userId: string): Project {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at,
+    ownerUserId: row.user_id,
     ...(shared ? { readOnly: true, myMemberId: mine?.id ?? null } : {}),
   };
 }

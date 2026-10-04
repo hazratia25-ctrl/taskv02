@@ -129,12 +129,28 @@ export function currentStageIds(stages: ProjectStage[], memberId: string): strin
   return stages.filter((s) => s.assigneeId === memberId).map((s) => s.id);
 }
 
+/** Prefill exactly from project_members.stage_ids when readable; else from stage assignees. */
+export function prefillStageIds(
+  serverStageIds: string[] | null | undefined,
+  stages: ProjectStage[],
+  memberId: string,
+): string[] {
+  if (Array.isArray(serverStageIds)) {
+    const valid = new Set(stages.map((s) => s.id));
+    return serverStageIds.filter((id) => valid.has(id));
+  }
+  return currentStageIds(stages, memberId);
+}
+
 /** Whether the UI may enable member editing at all; server rules stay authoritative. */
 export function memberEditState(
   project: Project,
   member: { id: string; userId?: string | null; status?: string; access?: MemberAccess },
+  ctx: { currentUserId?: string | null } = {},
 ): { allowed: boolean; reason: string | null } {
   const perms = projectPermissions(project);
+  // real owner id = projects.user_id (owned projects: the signed-in user)
+  const ownerUserId = project.ownerUserId ?? (!project.readOnly ? ctx.currentUserId : null);
   if (!perms.canManageMembers)
     return {
       allowed: false,
@@ -142,6 +158,10 @@ export function memberEditState(
     };
   if (project.myMemberId && member.id === project.myMemberId)
     return { allowed: false, reason: "ویرایش ردیف خودتان مجاز نیست." };
+  if (ctx.currentUserId && member.userId === ctx.currentUserId)
+    return { allowed: false, reason: "ویرایش ردیف خودتان مجاز نیست." };
+  if (ownerUserId && member.userId === ownerUserId)
+    return { allowed: false, reason: "ردیف مالک پروژه قابل ویرایش نیست." };
   if (!member.userId) return { allowed: false, reason: "این عضو حساب کاربری ندارد." };
   if (member.status === "PENDING") return { allowed: false, reason: "دعوت هنوز پذیرفته نشده است." };
   if (member.status === "REJECTED") return { allowed: false, reason: "دعوت رد شده است." };
