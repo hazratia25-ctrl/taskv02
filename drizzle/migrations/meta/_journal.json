@@ -36,6 +36,13 @@
       "when": 1790899587145,
       "tag": "0004_shared_project_edit_rpcs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791159277872,
+      "tag": "0005_versioned_save_rpcs",
+      "breakpoints": true
     }
   ]
 }
