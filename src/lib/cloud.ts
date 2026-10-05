@@ -129,19 +129,7 @@ export async function fetchCloud(userId: string): Promise<CloudSnapshot> {
   return {
     profile,
     settings,
-    tasks: (tasksRes.data ?? []).map((t) => ({
-      id: t.id,
-      title: t.title,
-      description: t.description ?? "",
-      status: t.status as TaskStatus,
-      priority: t.priority as TaskPriority,
-      categoryId: t.category_id,
-      tagIds: t.tag_ids ?? [],
-      dueDate: t.due_date,
-      createdAt: t.created_at,
-      updatedAt: t.updated_at,
-      completedAt: t.completed_at,
-    })),
+    tasks: (tasksRes.data ?? []).map(mapTaskRow),
     projects: [
       ...((projectsRes.data ?? []) as unknown as ProjectRow[]).map((row) =>
         mapProjectRow(row, userId),
@@ -274,4 +262,33 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
 
   enqueue(userId, ops);
   await flushQueue(userId);
+}
+
+/** Maps a tasks row (DB contract: user_id, due_date) to the app model. */
+export function mapTaskRow(t: {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  category_id: string | null;
+  tag_ids: string[] | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}): Task {
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description ?? "",
+    status: t.status as TaskStatus,
+    priority: t.priority as TaskPriority,
+    categoryId: t.category_id,
+    tagIds: t.tag_ids ?? [],
+    dueDate: t.due_date,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at,
+    completedAt: t.completed_at,
+  };
 }

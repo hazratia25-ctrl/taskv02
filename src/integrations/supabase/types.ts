@@ -358,6 +358,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      save_owned_project_versioned: {
+        Args: {
+          _expected_updated_at: string
+          _patch: Json
+          _project_id: string
+        }
+        Returns: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          members: Json
+          priority: string
+          stages: Json
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       save_owned_task_atomic: {
         Args: { _patch: Json; _task_id: string }
         Returns: {
@@ -381,8 +410,60 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      save_owned_task_versioned: {
+        Args: { _expected_updated_at: string; _patch: Json; _task_id: string }
+        Returns: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          priority: string
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       save_shared_project_content: {
         Args: { _patch: Json; _project_id: string }
+        Returns: {
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          members: Json
+          priority: string
+          stages: Json
+          status: string
+          tag_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_shared_project_content_versioned: {
+        Args: {
+          _expected_updated_at: string
+          _patch: Json
+          _project_id: string
+        }
         Returns: {
           category_id: string | null
           completed_at: string | null

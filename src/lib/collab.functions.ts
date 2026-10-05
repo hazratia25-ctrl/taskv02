@@ -79,11 +79,15 @@ export const createOwnedTask = createServerFn({ method: "POST" })
 
 export const saveOwnedTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { taskId: string; patch: TaskWriteInput }) => data)
+  .inputValidator(
+    (data: { taskId: string; patch: TaskWriteInput; expectedUpdatedAt: string }) => data,
+  )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase.rpc("save_owned_task_atomic", {
+    // stale expected version is rejected server-side with STALE_UPDATE (no overwrite)
+    const { data: row, error } = await context.supabase.rpc("save_owned_task_versioned", {
       _task_id: data.taskId,
       _patch: data.patch as never,
+      _expected_updated_at: String(data.expectedUpdatedAt),
     });
     if (error) throw new Error(error.message);
     return row;
@@ -134,11 +138,14 @@ export const createOwnedProject = createServerFn({ method: "POST" })
 /** Atomically saves an owned project without overwriting newer member stage ticks. */
 export const saveOwnedProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { projectId: string; patch: ProjectWriteInput }) => data)
+  .inputValidator(
+    (data: { projectId: string; patch: ProjectWriteInput; expectedUpdatedAt: string }) => data,
+  )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase.rpc("save_owned_project_atomic", {
+    const { data: row, error } = await context.supabase.rpc("save_owned_project_versioned", {
       _project_id: data.projectId,
       _patch: data.patch as never,
+      _expected_updated_at: String(data.expectedUpdatedAt),
     });
     if (error) throw new Error(error.message);
     return row;
@@ -502,13 +509,22 @@ export const saveSharedProjectContent = createServerFn({ method: "POST" })
     (data: {
       projectId: string;
       patch: { title?: string; description?: string; priority?: string; dueDate?: string | null };
-    }) => ({ projectId: String(data.projectId), patch: data.patch ?? {} }),
+      expectedUpdatedAt: string;
+    }) => ({
+      projectId: String(data.projectId),
+      patch: data.patch ?? {},
+      expectedUpdatedAt: String(data.expectedUpdatedAt),
+    }),
   )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase.rpc("save_shared_project_content", {
-      _project_id: data.projectId,
-      _patch: data.patch as never,
-    });
+    const { data: row, error } = await context.supabase.rpc(
+      "save_shared_project_content_versioned",
+      {
+        _project_id: data.projectId,
+        _patch: data.patch as never,
+        _expected_updated_at: data.expectedUpdatedAt,
+      },
+    );
     if (error) throw new Error(error.message);
     return row;
   });

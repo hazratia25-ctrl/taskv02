@@ -10,3 +10,4 @@
 > the editor, so keep the branch in a working state.
 
 <!-- LOVABLE:END -->
+- Concurrency: project/task saves go through *_versioned RPCs with expected updated_at; stale saves raise STALE_UPDATE and the client rolls back + refetches. Why: prevents silent overwrites without new columns.
