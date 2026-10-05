@@ -562,7 +562,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
         patch((p) => ({ ...p, tasks: [task, ...p.tasks] }));
         try {
-          await createOwnedTask({ data: task as TaskWriteInput });
+          const row = await createOwnedTask({ data: task as TaskWriteInput });
+          // adopt the server version so the first edit carries the correct expected timestamp
+          if (row) patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === task.id ? mapTaskRow(row) : t)) }));
           return task;
         } catch (e) {
           patch((p) => ({ ...p, tasks: p.tasks.filter((t) => t.id !== task.id) }));
