@@ -24,7 +24,8 @@ import {
 import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects } from "./cloud";
+import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects, mapTaskRow } from "./cloud";
+import { isStaleError, STALE_MESSAGE, runVersionedSave } from "./concurrency";
 import {
   toggleAssignedStage,
   notifyStageChanges,
@@ -488,21 +489,41 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                   priority: next.priority,
                   dueDate: next.dueDate ?? null,
                 },
+                expectedUpdatedAt: previous?.updatedAt ?? next.updatedAt,
               },
             })
-          : saveOwnedProject({ data: { projectId: next.id, patch: toWrite(next) } });
+          : saveOwnedProject({
+              data: {
+                projectId: next.id,
+                patch: toWrite(next),
+                expectedUpdatedAt: previous?.updatedAt ?? next.updatedAt,
+              },
+            });
+      let row: { updated_at?: string } | null = null;
       try {
-        await call;
+        row = (await call) as { updated_at?: string } | null;
       } catch (e) {
         settle();
-        failed(e, previous, next.id);
+        if (isStaleError(e)) {
+          restore(previous, next.id);
+          toast.error(STALE_MESSAGE);
+          collabFlight.invalidate();
+          await refreshCollab().catch(() => undefined);
+        } else failed(e, previous, next.id);
         throw e;
       }
       settle();
+      // keep the server version so the next save carries the right expected timestamp
+      const serverTs = row?.updated_at;
+      if (serverTs)
+        setData((prev) => ({
+          ...prev,
+          projects: prev.projects.map((p) => (p.id === next.id ? { ...p, updatedAt: serverTs } : p)),
+        }));
       collabFlight.invalidate(); // any fetch started before the write is now stale
       await refreshCollab();
     },
-    [userId, toWrite, failed, refreshCollab, collabFlight],
+    [userId, toWrite, failed, restore, refreshCollab, collabFlight],
   );
 
   const removeProject = useCallback(
@@ -563,17 +584,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 ? null
                 : before.completedAt,
         };
-        patch((p) => ({
-          ...p,
-          tasks: p.tasks.map((t) => (t.id === id ? next : t)),
-        }));
-        try {
-          await saveOwnedTask({ data: { taskId: id, patch: next as TaskWriteInput } });
-        } catch (e) {
-          patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? before : t)) }));
-          toast.error("ذخیرهٔ وظیفه ناموفق بود");
-          throw e;
-        }
+        await runVersionedSave({
+          apply: () =>
+            patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? next : t)) })),
+          rollback: () =>
+            patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? before : t)) })),
+          call: () =>
+            saveOwnedTask({
+              data: { taskId: id, patch: next as TaskWriteInput, expectedUpdatedAt: before.updatedAt },
+            }),
+          confirm: (row) =>
+            row &&
+            patch((p) => ({
+              ...p,
+              tasks: p.tasks.map((t) => (t.id === id ? mapTaskRow(row) : t)),
+            })),
+          refetch: async () => {
+            const { data: fresh } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
+            if (fresh)
+              patch((p) => ({
+                ...p,
+                tasks: p.tasks.map((t) => (t.id === id ? mapTaskRow(fresh) : t)),
+              }));
+          },
+          notify: (m) => toast.error(m),
+        });
       },
       deleteTask: async (id) => {
         const before = data.tasks.find((t) => t.id === id);
