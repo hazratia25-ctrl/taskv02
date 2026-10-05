@@ -1,5 +1,6 @@
 /** Optimistic-concurrency helpers: a save carries the server updated_at it was based on. */
-export const STALE_MESSAGE = "این مورد هم‌زمان در جای دیگری تغییر کرده است؛ آخرین نسخه بارگذاری شد.";
+export const STALE_MESSAGE =
+  "این مورد هم‌زمان در جای دیگری تغییر کرده است؛ آخرین نسخه بارگذاری شد.";
 
 export function isStaleError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e ?? "");

@@ -517,11 +517,14 @@ export const saveSharedProjectContent = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase.rpc("save_shared_project_content_versioned", {
-      _project_id: data.projectId,
-      _patch: data.patch as never,
-      _expected_updated_at: data.expectedUpdatedAt,
-    });
+    const { data: row, error } = await context.supabase.rpc(
+      "save_shared_project_content_versioned",
+      {
+        _project_id: data.projectId,
+        _patch: data.patch as never,
+        _expected_updated_at: data.expectedUpdatedAt,
+      },
+    );
     if (error) throw new Error(error.message);
     return row;
   });

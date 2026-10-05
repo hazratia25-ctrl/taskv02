@@ -24,7 +24,13 @@ import {
 import { daysBetween, formatJalali } from "./jalali";
 import { useAuth } from "./auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchCloud, pushCloud, fetchSharedProjects, fetchOwnedProjects, mapTaskRow } from "./cloud";
+import {
+  fetchCloud,
+  pushCloud,
+  fetchSharedProjects,
+  fetchOwnedProjects,
+  mapTaskRow,
+} from "./cloud";
 import { isStaleError, STALE_MESSAGE, runVersionedSave } from "./concurrency";
 import {
   toggleAssignedStage,
@@ -518,7 +524,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (serverTs)
         setData((prev) => ({
           ...prev,
-          projects: prev.projects.map((p) => (p.id === next.id ? { ...p, updatedAt: serverTs } : p)),
+          projects: prev.projects.map((p) =>
+            p.id === next.id ? { ...p, updatedAt: serverTs } : p,
+          ),
         }));
       collabFlight.invalidate(); // any fetch started before the write is now stale
       await refreshCollab();
@@ -564,7 +572,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         try {
           const row = await createOwnedTask({ data: task as TaskWriteInput });
           // adopt the server version so the first edit carries the correct expected timestamp
-          if (row) patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === task.id ? mapTaskRow(row) : t)) }));
+          if (row)
+            patch((p) => ({
+              ...p,
+              tasks: p.tasks.map((t) => (t.id === task.id ? mapTaskRow(row) : t)),
+            }));
           return task;
         } catch (e) {
           patch((p) => ({ ...p, tasks: p.tasks.filter((t) => t.id !== task.id) }));
@@ -593,7 +605,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? before : t)) })),
           call: () =>
             saveOwnedTask({
-              data: { taskId: id, patch: next as TaskWriteInput, expectedUpdatedAt: before.updatedAt },
+              data: {
+                taskId: id,
+                patch: next as TaskWriteInput,
+                expectedUpdatedAt: before.updatedAt,
+              },
             }),
           confirm: (row) =>
             row &&
@@ -602,7 +618,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               tasks: p.tasks.map((t) => (t.id === id ? mapTaskRow(row) : t)),
             })),
           refetch: async () => {
-            const { data: fresh } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
+            const { data: fresh } = await supabase
+              .from("tasks")
+              .select("*")
+              .eq("id", id)
+              .maybeSingle();
             if (fresh)
               patch((p) => ({
                 ...p,

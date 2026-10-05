@@ -266,9 +266,17 @@ export async function pushCloud(userId: string, data: AppData): Promise<void> {
 
 /** Maps a tasks row (DB contract: user_id, due_date) to the app model. */
 export function mapTaskRow(t: {
-  id: string; title: string; description: string | null; status: string; priority: string;
-  category_id: string | null; tag_ids: string[] | null; due_date: string | null;
-  created_at: string; updated_at: string; completed_at: string | null;
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  category_id: string | null;
+  tag_ids: string[] | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
 }): Task {
   return {
     id: t.id,
