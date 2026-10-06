@@ -31,7 +31,7 @@ import {
   fetchOwnedProjects,
   mapTaskRow,
 } from "./cloud";
-import { isStaleError, STALE_MESSAGE, runVersionedSave } from "./concurrency";
+import { createSaveSerializer } from "./concurrency";
 import {
   toggleAssignedStage,
   notifyStageChanges,
@@ -257,6 +257,11 @@ function sendNotices(projectId: string, items: Notice[]) {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<AppData>(emptyData);
+  // latest committed state, so consecutive actions never read a stale render closure
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const taskSaves = useRef(createSaveSerializer<Task>());
+  const projectSaves = useRef(createSaveSerializer<Project>());
   const [ready, setReady] = useState(false);
   const hydrated = useRef(false);
   const syncUserId = useRef<string | null>(null);
@@ -401,7 +406,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(t);
   }, [ready, data.tasks, data.settings.notificationsEnabled, data.settings.reminderDays]);
 
-  const patch = useCallback((fn: (prev: AppData) => AppData) => setData(fn), []);
+  const patch = useCallback((fn: (prev: AppData) => AppData) => {
+    dataRef.current = fn(dataRef.current); // visible to the next action in the same tick
+    setData(fn);
+  }, []);
 
   // ids with a write in flight: server snapshots must not drop or overwrite them yet
   const pendingProjects = useRef(createPendingCounter());
@@ -483,55 +491,57 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (next.readOnly && isNew) throw new Error("دسترسی ساخت این پروژه را ندارید.");
       // counted, so overlapping writes to one project keep it pending until the last one settles
       const settle = pendingProjects.current.begin(next.id);
-      const call = isNew
-        ? createOwnedProject({ data: toWrite(next) })
-        : next.readOnly
-          ? saveSharedProjectContent({
-              data: {
-                projectId: next.id,
-                patch: {
-                  title: next.title,
-                  description: next.description,
-                  priority: next.priority,
-                  dueDate: next.dueDate ?? null,
-                },
-                expectedUpdatedAt: previous?.updatedAt ?? next.updatedAt,
-              },
-            })
-          : saveOwnedProject({
-              data: {
-                projectId: next.id,
-                patch: toWrite(next),
-                expectedUpdatedAt: previous?.updatedAt ?? next.updatedAt,
-              },
-            });
-      let row: { updated_at?: string } | null = null;
       try {
-        row = (await call) as { updated_at?: string } | null;
-      } catch (e) {
+        if (isNew) {
+          await createOwnedProject({ data: toWrite(next) }).catch((e) => {
+            failed(e, previous, next.id);
+            throw e;
+          });
+        } else {
+          const setProject = (p2: Project) =>
+            setData((prev) => ({
+              ...prev,
+              projects: prev.projects.map((p) => (p.id === next.id ? p2 : p)),
+            }));
+          await projectSaves.current.run(next.id, {
+            base: previous ?? next,
+            call: async (expected) => {
+              const row = (await (next.readOnly
+                ? saveSharedProjectContent({
+                    data: {
+                      projectId: next.id,
+                      patch: {
+                        title: next.title,
+                        description: next.description,
+                        priority: next.priority,
+                        dueDate: next.dueDate ?? null,
+                      },
+                      expectedUpdatedAt: expected,
+                    },
+                  })
+                : saveOwnedProject({
+                    data: { projectId: next.id, patch: toWrite(next), expectedUpdatedAt: expected },
+                  }))) as { updated_at?: string } | null;
+              return { ...next, updatedAt: row?.updated_at ?? next.updatedAt };
+            },
+            confirm: (row, isLatest) => {
+              if (isLatest) setProject(row);
+            },
+            rollback: (confirmed) => setProject(confirmed),
+            refetch: () => {
+              collabFlight.invalidate();
+              return refreshCollab();
+            },
+            notify: (m) => toast.error(m),
+          });
+        }
+      } finally {
         settle();
-        if (isStaleError(e)) {
-          restore(previous, next.id);
-          toast.error(STALE_MESSAGE);
-          collabFlight.invalidate();
-          await refreshCollab().catch(() => undefined);
-        } else failed(e, previous, next.id);
-        throw e;
       }
-      settle();
-      // keep the server version so the next save carries the right expected timestamp
-      const serverTs = row?.updated_at;
-      if (serverTs)
-        setData((prev) => ({
-          ...prev,
-          projects: prev.projects.map((p) =>
-            p.id === next.id ? { ...p, updatedAt: serverTs } : p,
-          ),
-        }));
       collabFlight.invalidate(); // any fetch started before the write is now stale
       await refreshCollab();
     },
-    [userId, toWrite, failed, restore, refreshCollab, collabFlight],
+    [userId, toWrite, failed, refreshCollab, collabFlight],
   );
 
   const removeProject = useCallback(
@@ -556,6 +566,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<StoreValue>(() => {
     const now = () => new Date().toISOString();
+    const replaceProject = (next: Project) =>
+      patch((p) => ({ ...p, projects: p.projects.map((pr) => (pr.id === next.id ? next : pr)) }));
 
     return {
       ...data,
@@ -585,9 +597,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       },
       updateTask: async (id, p2) => {
-        const before = data.tasks.find((t) => t.id === id);
+        const before = dataRef.current.tasks.find((t) => t.id === id);
         if (!before) throw new Error("وظیفه یافت نشد.");
-        const next = {
+        const next: Task = {
           ...before,
           ...p2,
           updatedAt: now(),
@@ -598,36 +610,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 ? null
                 : before.completedAt,
         };
-        await runVersionedSave({
-          apply: () =>
-            patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? next : t)) })),
-          rollback: () =>
-            patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? before : t)) })),
-          call: () =>
-            saveOwnedTask({
-              data: {
-                taskId: id,
-                patch: next as TaskWriteInput,
-                expectedUpdatedAt: before.updatedAt,
-              },
-            }),
-          confirm: (row) =>
-            row &&
-            patch((p) => ({
-              ...p,
-              tasks: p.tasks.map((t) => (t.id === id ? mapTaskRow(row) : t)),
-            })),
+        const setTask = (t2: Task) =>
+          patch((p) => ({ ...p, tasks: p.tasks.map((t) => (t.id === id ? t2 : t)) }));
+        setTask(next); // optimistic; the queue keeps the order of user intents
+        await taskSaves.current.run(id, {
+          base: before,
+          call: async (expected) =>
+            mapTaskRow(
+              await saveOwnedTask({
+                data: { taskId: id, patch: next as TaskWriteInput, expectedUpdatedAt: expected },
+              }),
+            ),
+          // newer queued intent stays on screen; only the last confirmation replaces the row
+          confirm: (row, isLatest) => isLatest && setTask(row),
+          rollback: (confirmed) => setTask(confirmed),
           refetch: async () => {
             const { data: fresh } = await supabase
               .from("tasks")
               .select("*")
               .eq("id", id)
               .maybeSingle();
-            if (fresh)
-              patch((p) => ({
-                ...p,
-                tasks: p.tasks.map((t) => (t.id === id ? mapTaskRow(fresh) : t)),
-              }));
+            if (fresh) setTask(mapTaskRow(fresh));
           },
           notify: (m) => toast.error(m),
         });
@@ -676,7 +679,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return project;
       },
       updateProject: async (id, input) => {
-        const before = data.projects.find((pr) => pr.id === id);
+        const before = dataRef.current.projects.find((pr) => pr.id === id);
         // shared projects: only content fields may change; the server re-checks EDIT/MANAGE
         const p2: Partial<ProjectInput> = before?.readOnly ? sharedContentPatch(input) : input;
         if (before && !before.readOnly && p2.stages) {
@@ -689,54 +692,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }),
           );
         }
-        let next: Project | null = null;
-        patch((p) => ({
-          ...p,
-          projects: p.projects.map((pr) => {
-            if (pr.id !== id) return pr;
-            next = {
-              ...pr,
-              ...p2,
-              updatedAt: now(),
-              completedAt:
-                p2.status === "COMPLETED"
-                  ? (pr.completedAt ?? now())
-                  : p2.status
-                    ? null
-                    : pr.completedAt,
-            };
-            return next;
-          }),
-        }));
-        if (next) await persistProject(next, before ?? null);
+        const cur = dataRef.current.projects.find((pr) => pr.id === id);
+        if (!cur) return;
+        // next is computed before setState, so the write never depends on a deferred updater
+        const next: Project = {
+          ...cur,
+          ...p2,
+          updatedAt: now(),
+          completedAt:
+            p2.status === "COMPLETED"
+              ? (cur.completedAt ?? now())
+              : p2.status
+                ? null
+                : cur.completedAt,
+        };
+        replaceProject(next);
+        await persistProject(next, cur);
       },
       deleteProject: async (id) => {
-        const before = data.projects.find((pr) => pr.id === id);
+        const before = dataRef.current.projects.find((pr) => pr.id === id);
         patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) }));
         if (before) await removeProject(before);
       },
       setProjectStatus: async (id, status) => {
-        const before = data.projects.find((pr) => pr.id === id);
-        let next: Project | null = null;
-        patch((p) => ({
-          ...p,
-          projects: p.projects.map((pr) => {
-            if (pr.id !== id) return pr;
-            next = {
-              ...pr,
-              status,
-              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
-              updatedAt: now(),
-            };
-            return next;
-          }),
-        }));
-        if (next) await persistProject(next, before ?? null);
+        const cur = dataRef.current.projects.find((pr) => pr.id === id);
+        if (!cur) return;
+        const next: Project = {
+          ...cur,
+          status,
+          completedAt: status === "COMPLETED" ? (cur.completedAt ?? now()) : null,
+          updatedAt: now(),
+        };
+        replaceProject(next);
+        await persistProject(next, cur);
       },
 
       refreshCollab,
       toggleStage: async (projectId, stageId) => {
-        const target = data.projects.find((p) => p.id === projectId);
+        const target = dataRef.current.projects.find((p) => p.id === projectId);
         if (target?.readOnly) {
           // shared project: only the assigned member may tick, and only on the server
           try {
@@ -748,28 +741,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           }
           return;
         }
-        const before = target ?? null;
-        let next: Project | null = null;
-        patch((p) => ({
-          ...p,
-          projects: p.projects.map((pr) => {
-            if (pr.id !== projectId) return pr;
-            const stages = pr.stages.map((st) =>
-              st.id === stageId ? { ...st, done: !st.done, doneAt: now() } : st,
-            );
-            sendNotices(pr.id, stageNotices(pr, { ...pr, stages }));
-            const status = deriveProjectStatus(stages, pr.status);
-            next = {
-              ...pr,
-              stages,
-              status,
-              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
-              updatedAt: now(),
-            };
-            return next;
-          }),
-        }));
-        if (next) await persistProject(next, before);
+        if (!target) return;
+        const stages = target.stages.map((st) =>
+          st.id === stageId ? { ...st, done: !st.done, doneAt: now() } : st,
+        );
+        const status = deriveProjectStatus(stages, target.status);
+        const next: Project = {
+          ...target,
+          stages,
+          status,
+          completedAt: status === "COMPLETED" ? (target.completedAt ?? now()) : null,
+          updatedAt: now(),
+        };
+        sendNotices(target.id, stageNotices(target, { ...target, stages }));
+        replaceProject(next);
+        await persistProject(next, target);
       },
 
       createCategory: (name, color) =>
