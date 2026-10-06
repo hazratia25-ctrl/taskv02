@@ -563,6 +563,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<StoreValue>(() => {
     const now = () => new Date().toISOString();
+    const replaceProject = (next: Project) =>
+      patch((p) => ({ ...p, projects: p.projects.map((pr) => (pr.id === next.id ? next : pr)) }));
 
     return {
       ...data,
@@ -674,7 +676,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return project;
       },
       updateProject: async (id, input) => {
-        const before = data.projects.find((pr) => pr.id === id);
+        const before = dataRef.current.projects.find((pr) => pr.id === id);
         // shared projects: only content fields may change; the server re-checks EDIT/MANAGE
         const p2: Partial<ProjectInput> = before?.readOnly ? sharedContentPatch(input) : input;
         if (before && !before.readOnly && p2.stages) {
@@ -689,49 +691,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
         const cur = dataRef.current.projects.find((pr) => pr.id === id);
         if (!cur) return;
+        // next is computed before setState, so the write never depends on a deferred updater
         const next: Project = {
-              ...cur,
-              ...p2,
-              updatedAt: now(),
-              completedAt:
-                p2.status === "COMPLETED"
-                  ? (pr.completedAt ?? now())
-                  : p2.status
-                    ? null
-                    : pr.completedAt,
-            };
-            return next;
-          }),
-        }));
-        if (next) await persistProject(next, before ?? null);
+          ...cur,
+          ...p2,
+          updatedAt: now(),
+          completedAt:
+            p2.status === "COMPLETED"
+              ? (cur.completedAt ?? now())
+              : p2.status
+                ? null
+                : cur.completedAt,
+        };
+        replaceProject(next);
+        await persistProject(next, cur);
       },
       deleteProject: async (id) => {
-        const before = data.projects.find((pr) => pr.id === id);
+        const before = dataRef.current.projects.find((pr) => pr.id === id);
         patch((p) => ({ ...p, projects: p.projects.filter((pr) => pr.id !== id) }));
         if (before) await removeProject(before);
       },
       setProjectStatus: async (id, status) => {
-        const before = data.projects.find((pr) => pr.id === id);
-        let next: Project | null = null;
-        patch((p) => ({
-          ...p,
-          projects: p.projects.map((pr) => {
-            if (pr.id !== id) return pr;
-            next = {
-              ...pr,
-              status,
-              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
-              updatedAt: now(),
-            };
-            return next;
-          }),
-        }));
-        if (next) await persistProject(next, before ?? null);
+        const cur = dataRef.current.projects.find((pr) => pr.id === id);
+        if (!cur) return;
+        const next: Project = {
+          ...cur,
+          status,
+          completedAt: status === "COMPLETED" ? (cur.completedAt ?? now()) : null,
+          updatedAt: now(),
+        };
+        replaceProject(next);
+        await persistProject(next, cur);
       },
 
       refreshCollab,
       toggleStage: async (projectId, stageId) => {
-        const target = data.projects.find((p) => p.id === projectId);
+        const target = dataRef.current.projects.find((p) => p.id === projectId);
         if (target?.readOnly) {
           // shared project: only the assigned member may tick, and only on the server
           try {
@@ -743,28 +738,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           }
           return;
         }
-        const before = target ?? null;
-        let next: Project | null = null;
-        patch((p) => ({
-          ...p,
-          projects: p.projects.map((pr) => {
-            if (pr.id !== projectId) return pr;
-            const stages = pr.stages.map((st) =>
-              st.id === stageId ? { ...st, done: !st.done, doneAt: now() } : st,
-            );
-            sendNotices(pr.id, stageNotices(pr, { ...pr, stages }));
-            const status = deriveProjectStatus(stages, pr.status);
-            next = {
-              ...pr,
-              stages,
-              status,
-              completedAt: status === "COMPLETED" ? (pr.completedAt ?? now()) : null,
-              updatedAt: now(),
-            };
-            return next;
-          }),
-        }));
-        if (next) await persistProject(next, before);
+        if (!target) return;
+        const stages = target.stages.map((st) =>
+          st.id === stageId ? { ...st, done: !st.done, doneAt: now() } : st,
+        );
+        const status = deriveProjectStatus(stages, target.status);
+        const next: Project = {
+          ...target,
+          stages,
+          status,
+          completedAt: status === "COMPLETED" ? (target.completedAt ?? now()) : null,
+          updatedAt: now(),
+        };
+        sendNotices(target.id, stageNotices(target, { ...target, stages }));
+        replaceProject(next);
+        await persistProject(next, target);
       },
 
       createCategory: (name, color) =>
