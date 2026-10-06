@@ -406,7 +406,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(t);
   }, [ready, data.tasks, data.settings.notificationsEnabled, data.settings.reminderDays]);
 
-  const patch = useCallback((fn: (prev: AppData) => AppData) => setData(fn), []);
+  const patch = useCallback((fn: (prev: AppData) => AppData) => {
+    dataRef.current = fn(dataRef.current); // visible to the next action in the same tick
+    setData(fn);
+  }, []);
 
   // ids with a write in flight: server snapshots must not drop or overwrite them yet
   const pendingProjects = useRef(createPendingCounter());
